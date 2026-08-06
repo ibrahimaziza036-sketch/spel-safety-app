@@ -1,0 +1,14 @@
+# Cloudflare Tunnel config for the SPEL Safety App.
+# Copy this to:  C:\Users\Ibrahim.Aziz\.cloudflared\config.yml
+# and replace <YOUR-TUNNEL-UUID> and the hostname with your real values
+# (the UUID is printed by `cloudflared tunnel create spel-safety`).
+
+tunnel: <YOUR-TUNNEL-UUID>
+credentials-file: C:\Users\Ibrahim.Aziz\.cloudflared\<YOUR-TUNNEL-UUID>.json
+
+ingress:
+  # Public hostname -> your local app on port 3000
+  - hostname: safety.spelgroup.com
+    service: http://localhost:3000
+  # Everything else gets 404 (required catch-all)
+  - service: http_status:404

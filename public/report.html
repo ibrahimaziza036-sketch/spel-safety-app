@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Report an Incident — SPEL Safety</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div id="nav"></div>
+  <div class="wrap" style="max-width:680px">
+    <div id="form-view">
+      <h1 class="page-title">Report an Incident</h1>
+      <p class="page-sub">Fill this the moment something happens — even a near-miss. Management is alerted instantly.</p>
+
+      <div id="banner"></div>
+
+      <form id="form" class="card" novalidate>
+        <label class="field">
+          <span>Unit <span class="req">*</span></span>
+          <select name="unit" id="unit" required></select>
+        </label>
+
+        <label class="field">
+          <span>What happened? <span class="req">*</span></span>
+          <textarea name="description" required maxlength="5000" placeholder="Describe briefly what happened…"></textarea>
+        </label>
+
+        <label class="field">
+          <span>Type of incident <span class="req">*</span></span>
+          <select name="type" id="type" required></select>
+        </label>
+
+        <div class="field">
+          <span style="display:block;font-weight:600;font-size:14px;margin-bottom:6px">Severity <span class="req">*</span></span>
+          <div class="sev-select" id="sev"></div>
+          <input type="hidden" name="severity" id="severity" required />
+        </div>
+
+        <label class="field">
+          <span>Location / Machine / Area</span>
+          <input name="location" maxlength="200" placeholder="e.g. Molding hall, Machine M-12" />
+        </label>
+
+        <label class="field">
+          <span>When did it happen?</span>
+          <input type="datetime-local" name="occurred_at" id="occurred_at" />
+        </label>
+
+        <label class="field">
+          <span>Injured person (if any)</span>
+          <input name="injured_person" maxlength="200" placeholder="Name / employee no. — leave blank if none" />
+          <div class="hint">Sirf tab likhein jab zaroori ho. Ye naam safety record ka hissa banta hai.</div>
+        </label>
+
+        <div class="grid cols-2">
+          <label class="field">
+            <span>Your name</span>
+            <input name="reporter_name" maxlength="200" placeholder="Reporter name" />
+          </label>
+          <label class="field">
+            <span>Your contact</span>
+            <input name="reporter_contact" maxlength="200" placeholder="Phone / extension" />
+          </label>
+        </div>
+
+        <label class="field">
+          <span>Photo (optional)</span>
+          <input type="file" name="photo" accept="image/*" capture="environment" />
+          <div class="hint">Take a picture of the scene if it is safe to do so.</div>
+        </label>
+
+        <button type="submit" class="btn big" id="submit">🚨 Submit &amp; Alert Management</button>
+
+        <p class="hint" style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px">
+          <b>Privacy notice:</b> Ye report SPEL ke safety record mein save hoti hai aur management ko
+          email/WhatsApp par foran bheji jati hai (photo aur naam samet). Ye sirf workplace safety,
+          investigation aur legal/compliance requirements ke liye use hoti hai. Kisi doosre shakhs ka
+          naam ya photo sirf zaroorat ke mutabiq likhein.
+        </p>
+      </form>
+    </div>
+
+    <div id="success-view" class="card success" style="display:none">
+      <div class="tick">✓</div>
+      <h2 style="margin:0">Report submitted</h2>
+      <p class="muted">Management has been alerted. Thank you for keeping SPEL safe.</p>
+      <div class="ref" id="ref-no"></div>
+      <p class="muted" style="font-size:13px">Note this reference number.</p>
+      <button class="btn ghost" id="another">Report another incident</button>
+    </div>
+  </div>
+
+  <script type="module" src="/js/report.js"></script>
+</body>
+</html>

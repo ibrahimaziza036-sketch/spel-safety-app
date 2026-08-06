@@ -1,0 +1,21 @@
+node_modules/
+
+# Secrets
+.env
+
+# Runtime data: database, incident photos, WhatsApp session + cache.
+# NOTE: data/ holds injury photos and personal names — treat as confidential.
+data/
+backups/
+
+# whatsapp-web.js writes these; the app points them under data/, but older
+# versions (and the library itself in some paths) may drop them at the root.
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Generated QR posters
+public/qr/*.png
+public/qr/index.html
+
+npm-debug.log*
+.DS_Store

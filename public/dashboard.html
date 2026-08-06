@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Safety Dashboard — SPEL</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div id="nav"></div>
+  <div class="wrap">
+    <h1 class="page-title">Safety Dashboard</h1>
+    <p class="page-sub">Live view of incidents across all SPEL units.</p>
+
+    <div id="channel-alarm"></div>
+    <div id="banner"></div>
+
+    <div class="grid cols-4" id="kpis" style="margin-bottom:16px"></div>
+
+    <div class="grid cols-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="section-title">📊 Incidents by Unit</div>
+        <canvas id="unitChart" height="220"></canvas>
+      </div>
+      <div class="card">
+        <div class="section-title">📈 Monthly Trend</div>
+        <canvas id="trendChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="grid cols-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="section-title">⚠️ By Severity</div>
+        <canvas id="sevChart" height="220"></canvas>
+      </div>
+      <div class="card">
+        <div class="section-title">🏷️ By Type</div>
+        <canvas id="typeChart" height="220"></canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">🏭 Unit Safety Scorecard</div>
+      <div class="table-wrap">
+        <table class="data" id="unitTable">
+          <thead><tr><th>Unit</th><th class="right">Total Incidents</th><th class="right">Days Since Last</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/chart.umd.js"></script>
+  <script type="module" src="/js/dashboard.js"></script>
+</body>
+</html>

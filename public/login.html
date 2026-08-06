@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login — SPEL Safety</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div class="topbar">
+    <span class="brand">
+      <svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">
+        <defs>
+          <linearGradient id="brandShield" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffffff"/>
+            <stop offset="1" stop-color="#dbe6ff"/>
+          </linearGradient>
+        </defs>
+        <path d="M20 3.5 L33.5 8 V18.5 C33.5 27.2 27.7 33.8 20 36.6 C12.3 33.8 6.5 27.2 6.5 18.5 V8 Z" fill="url(#brandShield)"/>
+        <path d="M13.4 19.9 l4.7 4.7 l8.7 -10.1" fill="none" stroke="#f97316" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="brand-name"><b>SPEL</b><span class="brand-sub">Safety</span></span>
+    </span>
+  </div>
+  <div class="wrap" style="max-width:420px">
+    <div class="card" style="margin-top:40px">
+      <h1 class="page-title" style="text-align:center">Sign in</h1>
+      <p class="page-sub" style="text-align:center">Staff login for the safety management system.</p>
+      <div id="banner"></div>
+      <form id="form">
+        <label class="field"><span>Username</span><input name="username" id="username" autocomplete="username" autofocus /></label>
+        <label class="field"><span>Password</span><input type="password" name="password" id="password" autocomplete="current-password" /></label>
+        <button class="btn big" id="submit" type="submit">Sign in</button>
+      </form>
+      <p class="hint" style="text-align:center;margin-top:16px">
+        Reporting an incident? <a href="/report.html">Open the report form →</a> (no login needed)
+      </p>
+    </div>
+  </div>
+  <script type="module" src="/js/login.js"></script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin — SPEL Safety</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <div id="nav"></div>
+  <div class="wrap" style="max-width:760px">
+    <h1 class="page-title">Admin &amp; Setup</h1>
+    <p class="page-sub">Connect WhatsApp, check email delivery, and print unit QR codes.</p>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title">📱 WhatsApp Connection</div>
+      <div id="wa-status"></div>
+      <div id="wa-qr" style="text-align:center;margin-top:10px"></div>
+      <p class="hint">First time: open this page on the server, then scan the QR with the dedicated SPEL WhatsApp number (WhatsApp → Linked Devices → Link a Device). You only scan once.</p>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title">📇 Alert Recipients</div>
+      <p class="hint">Jinko har incident ka alert jaye. WhatsApp number (0300… bhi chalega, khud 92 lag jayega) ya email add karo.</p>
+      <div class="table-wrap">
+        <table class="data" id="recips">
+          <thead><tr><th>Type</th><th>Recipient</th><th>Label</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="recip-banner"></div>
+      <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px">
+        <div class="grid cols-3">
+          <label class="field"><span>Type</span><select id="r_channel"><option value="whatsapp">WhatsApp</option><option value="email">Email</option></select></label>
+          <label class="field"><span>Number / Email</span><input id="r_value" placeholder="03001234567  ya  name@spelgroup.com" /></label>
+          <label class="field"><span>Label (optional)</span><input id="r_label" placeholder="e.g. CEO, GM Safety" /></label>
+        </div>
+        <button class="btn" id="addRecip">+ Add Recipient</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title">✉️ Email (SMTP)</div>
+      <div id="email-status"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title">🔗 Unit QR Codes</div>
+      <p class="hint">Run <code>npm run qr</code> on the server to generate printable QR codes into <code>public/qr/</code>. Each QR opens the report form pre-set to that unit.</p>
+      <div id="qr-links"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title">👤 Users &amp; Roles</div>
+      <p class="hint">viewer = dashboards only · safety_officer = investigate + CAPA · admin = everything</p>
+      <div class="table-wrap">
+        <table class="data" id="users">
+          <thead><tr><th>Username</th><th>Role</th><th>Added</th><th></th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div id="user-banner"></div>
+      <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px">
+        <div class="grid cols-3">
+          <label class="field"><span>New username</span><input id="u_name" autocomplete="off" /></label>
+          <label class="field"><span>Password</span><input id="u_pass" type="text" autocomplete="off" placeholder="min 6 chars" /></label>
+          <label class="field"><span>Role</span><select id="u_role"><option value="viewer">viewer</option><option value="safety_officer">safety_officer</option><option value="admin">admin</option></select></label>
+        </div>
+        <button class="btn" id="addUser">+ Add User</button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title">📤 Alert Delivery (outbox)</div>
+      <p class="hint">Jo alerts nahi ja sakay wo yahan dikhte hain aur khud dobara try hote hain. Zaroorat ho to manually retry karo.</p>
+      <div id="alerts"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title">💾 System Health</div>
+      <div id="system"></div>
+      <button class="btn ghost sm" id="runRetention" style="margin-top:10px">Run cleanup now</button>
+      <span id="retention-result" class="hint"></span>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title">🧾 Audit Trail</div>
+      <p class="hint">Har change ka permanent record — kaun, kab, kya.</p>
+      <div class="table-wrap">
+        <table class="data" id="audit">
+          <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Record</th><th>Detail</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">📬 Recent Notification Log</div>
+      <div class="table-wrap">
+        <table class="data" id="log">
+          <thead><tr><th>Ref</th><th>Channel</th><th>Recipient</th><th>Status</th><th>Detail</th><th>Time</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="/js/admin.js"></script>
+</body>
+</html>
