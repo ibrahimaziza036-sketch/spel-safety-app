@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node --disable-warning=ExperimentalWarning server.js",
     "dev": "node --watch --disable-warning=ExperimentalWarning server.js",
+    "setup": "node scripts/setup.js",
     "qr": "node --disable-warning=ExperimentalWarning scripts/generate-qr.js",
     "backup": "node --disable-warning=ExperimentalWarning scripts/backup.js",
     "seed": "node --disable-warning=ExperimentalWarning scripts/seed.js",

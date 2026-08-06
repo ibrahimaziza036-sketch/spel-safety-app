@@ -6,6 +6,33 @@ apne dev/test machine par tunnel banane ki zaroorat nahi.
 
 ---
 
+## ⚡ Sab se aasan: EK COMMAND (recommended)
+
+Production server par (Node 22.5+ + cloudflared installed):
+
+```bash
+git clone https://github.com/ibrahimaziza036-sketch/spel-safety-app.git
+cd spel-safety-app
+npm run setup
+```
+
+`npm run setup` **poora deployment khud kar deta hai** — dependencies, `.env` +
+auto-generated secrets, PM2 (24/7), Cloudflare Tunnel (create + DNS + Windows
+service), QR posters, aur smoke test. Bas kuch sawal poochhega (LAN ya internet,
+hostname, admin password, WhatsApp numbers, email).
+
+**Sirf 2 cheezein aap ko physically karni hongi** (software ye nahi kar sakta —
+security features hain):
+1. **Cloudflare login** — script browser khol degi, aap authorize karenge (ek click).
+2. **WhatsApp QR scan** — end par `/admin.html` khol kar QR scan karenge.
+
+> Baaki neeche manual steps sirf **reference / troubleshooting** ke liye hain —
+> `npm run setup` yehi sab automate karta hai. Re-run karna safe hai.
+
+---
+
+---
+
 ## Server requirements
 - **Node.js 22.5+** (`node -v`) — built-in `node:sqlite` ke liye.
 - **Outbound internet** (WhatsApp + email + tunnel ke liye) — chahe users LAN par hi hon.
