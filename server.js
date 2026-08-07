@@ -14,6 +14,7 @@ import { ensureAdminUser, requireAuth, requireRole, refreshSession } from './ser
 import { seedRecipientsFromEnv } from './services/recipients.js';
 import { startNotifyWorker, stopNotifyWorker, notifyBusy, flushDeferred } from './services/notify.js';
 import { startRetentionWorker, stopRetentionWorker } from './services/retention.js';
+import { startReminderWorker, stopReminderWorker } from './services/reminders.js';
 import { startMonitor, stopMonitor, monitorStatus } from './services/monitor.js';
 import { SqliteStore } from './services/session-store.js';
 import { csrfProtection, csrfToken } from './services/csrf.js';
@@ -247,6 +248,7 @@ const server = app.listen(config.port, () => {
 
   startNotifyWorker();
   startRetentionWorker();
+  startReminderWorker();
   startMonitor();
 });
 
@@ -276,6 +278,7 @@ async function shutdown(signal, code = 0) {
     await closed;
     stopNotifyWorker();
     stopRetentionWorker();
+    stopReminderWorker();
     stopMonitor();
     const drainUntil = Date.now() + 8000;
     while (notifyBusy() && Date.now() < drainUntil) {

@@ -98,6 +98,29 @@ function renderOverdue(list) {
     </a>`).join('');
 }
 
+function renderVerify(capa) {
+  const box = document.getElementById('verify-note');
+  if (!box) return;
+  const awaiting = capa?.awaitingVerification || 0;
+  const bad = capa?.notEffective || 0;
+  if (!awaiting && !bad) { box.innerHTML = ''; return; }
+  const parts = [];
+  if (awaiting) parts.push(`🔎 <b>${awaiting}</b> completed action(s) awaiting effectiveness check`);
+  if (bad) parts.push(`⚠ <b>${bad}</b> not effective / recurred`);
+  box.innerHTML = parts.join(' · ');
+}
+
+function renderHotspots(list) {
+  const box = document.getElementById('hotspots');
+  if (!box) return;
+  if (!list || !list.length) { box.innerHTML = '<p class="muted" style="padding:8px 0">✅ No recurring clusters in the last 90 days.</p>'; return; }
+  box.innerHTML = list.map((h) => `
+    <div class="row-item" style="cursor:default">
+      <span class="ri-main"><span class="chip" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe">${escapeHtml(String(h.n))}×</span> <b>${escapeHtml(h.type)}</b> <span class="muted">at ${escapeHtml(h.unit)}</span></span>
+      <span class="ri-reason muted">last ${h.daysSinceLast === 0 ? 'today' : escapeHtml(String(h.daysSinceLast)) + 'd ago'}</span>
+    </div>`).join('');
+}
+
 const PROGRESS = (r) => {
   if (r.status === 'Closed') return '<span class="chip prog-done">✓ Closed</span>';
   const steps = [];
@@ -202,6 +225,8 @@ async function load() {
   renderFollowup(s.followup, s.bySeverity);
   renderNeeds(s.needsAttention);
   renderOverdue(s.overdueCapa);
+  renderVerify(s.capa);
+  renderHotspots(s.hotspots);
   renderRecent(s.recent);
   renderCharts(s);
   renderScorecard(s.units);

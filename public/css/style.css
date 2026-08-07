@@ -118,7 +118,24 @@ textarea { min-height: 90px; resize: vertical; }
 .sev-select button {
   border: 2px solid var(--line); background: #fff; border-radius: 10px; padding: 12px 6px;
   font-weight: 700; cursor: pointer; font-size: 14px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
 }
+
+/* ---------- pictorial type picker (low-literacy friendly) ---------- */
+.type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.type-tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  border: 2px solid var(--line); background: #fff; border-radius: 12px; padding: 12px 6px;
+  cursor: pointer; font-weight: 700; color: var(--ink); text-align: center; min-height: 80px;
+}
+.type-tile:hover { border-color: #cbd5e1; background: #f8fafc; }
+.type-tile[aria-pressed="true"] {
+  border-color: var(--blue); background: #eff6ff; color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(29, 78, 216, .12);
+}
+.ti-ico { font-size: 26px; line-height: 1; }
+.ti-lbl { font-size: 12.5px; line-height: 1.2; }
+@media (max-width: 430px) { .type-grid { grid-template-columns: repeat(2, 1fr); } }
 .sev-select button[aria-pressed="true"] { color: #fff; border-color: transparent; }
 .sev-select button.Minor[aria-pressed="true"] { background: var(--minor); }
 .sev-select button.Serious[aria-pressed="true"] { background: var(--serious); }

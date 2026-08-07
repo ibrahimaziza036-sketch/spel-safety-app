@@ -296,11 +296,53 @@ document.getElementById('addUser').addEventListener('click', async () => {
   }
 });
 
+// ---- daily reminders ----
+const SLA_SEVERITIES = ['Fatal', 'Major', 'Serious', 'Minor'];
+async function loadReminders() {
+  try {
+    const { config: c, due } = await api('/api/admin/reminders');
+    document.getElementById('rem_enabled').checked = !!c.enabled;
+    document.getElementById('rem_hour').value = c.hour;
+    for (const sev of SLA_SEVERITIES) document.getElementById('rem_sla_' + sev).value = c.slaDays[sev];
+    document.getElementById('rem-status').innerHTML =
+      `<div class="hint">Due right now: <b>${due.overdueSla}</b> incident(s) past SLA · <b>${due.overdue}</b> overdue action(s).</div>`;
+  } catch (err) {
+    document.getElementById('rem-status').innerHTML = `<div class="banner err">${escapeHtml(err.message)}</div>`;
+  }
+}
+function remResult(m) { document.getElementById('rem_result').textContent = ' ' + m; }
+
+document.getElementById('rem_save').addEventListener('click', async () => {
+  remResult('saving…');
+  const slaDays = {};
+  for (const sev of SLA_SEVERITIES) slaDays[sev] = Number(document.getElementById('rem_sla_' + sev).value) || 1;
+  const body = {
+    enabled: document.getElementById('rem_enabled').checked,
+    hour: Number(document.getElementById('rem_hour').value) || 0,
+    slaDays,
+  };
+  try {
+    await api('/api/admin/reminders', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    remResult('✓ saved');
+    loadReminders();
+  } catch (err) { remResult('✗ ' + err.message); }
+});
+
+document.getElementById('rem_test').addEventListener('click', async () => {
+  remResult('sending…');
+  try {
+    const r = await api('/api/admin/reminders/test', { method: 'POST' });
+    if (!r.attempted) remResult('nothing due right now — no message sent');
+    else remResult(`✓ sent (WhatsApp: ${r.waDelivered ? 'yes' : 'no'}, email: ${r.emailDelivered ? 'yes' : 'no'})`);
+  } catch (err) { remResult('✗ ' + err.message); }
+});
+
 function refresh() { loadWa(); loadLog(); loadAlerts(); }
 
 // mountSession loads the CSRF token, so wait for it before any write can happen.
 mountSession().then(() => {
   loadEmail();
+  loadReminders();
   loadQrLinks();
   loadRecipients();
   loadUsers();

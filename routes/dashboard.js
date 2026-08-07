@@ -75,6 +75,13 @@ router.get('/stats', (req, res) => {
   const capaOverdue = db.prepare(
     `SELECT COUNT(*) AS n FROM capa c JOIN incidents i ON i.id=c.incident_id WHERE i.${NOT_VOID} AND c.status!='Done' AND c.due_date IS NOT NULL AND c.due_date < ?`
   ).get(todayPkt).n;
+  // Effectiveness verification: Done actions not yet checked, and ones that failed.
+  const capaAwaitingVerify = db.prepare(
+    `SELECT COUNT(*) AS n FROM capa c JOIN incidents i ON i.id=c.incident_id WHERE i.${NOT_VOID} AND c.status='Done' AND (c.effectiveness IS NULL OR c.effectiveness='')`
+  ).get().n;
+  const capaNotEffective = db.prepare(
+    `SELECT COUNT(*) AS n FROM capa c JOIN incidents i ON i.id=c.incident_id WHERE i.${NOT_VOID} AND c.effectiveness IN ('Not Effective','Recurred')`
+  ).get().n;
 
   // ---- 12-month trend (always; PKT months, zero-filled) ----
   const monthRows = db.prepare(
@@ -164,6 +171,18 @@ router.get('/stats', (req, res) => {
     daysOverdue: Math.max(0, Math.floor((Date.now() - Date.parse(r.due_date + 'T00:00:00Z')) / 86400000)),
   }));
 
+  // ---- recurring hotspots: same unit+type happening again in a rolling window ----
+  // A cluster (>=2 of the same type at the same unit) is the strongest sign a
+  // control is missing or ineffective — surface the worst ones for action.
+  const HOTSPOT_DAYS = 90;
+  const hotspotSince = new Date(Date.now() - HOTSPOT_DAYS * 86400000).toISOString();
+  const hotspots = db.prepare(`
+    SELECT unit, type, COUNT(*) AS n, MAX(${EVENT_TIME}) AS last
+    FROM incidents WHERE ${NOT_VOID} AND ${EVENT_TIME} >= ?
+    GROUP BY unit, type HAVING n >= 2
+    ORDER BY n DESC, last DESC LIMIT 6
+  `).all(hotspotSince).map((r) => ({ ...r, daysSinceLast: daysSince(r.last), windowDays: HOTSPOT_DAYS }));
+
   res.json({
     ok: true,
     range: { key: rb.key, label: rb.label },
@@ -171,7 +190,7 @@ router.get('/stats', (req, res) => {
     bySeverity, byUnit, byType,
     nearMissShare,
     byStatus, openNow,
-    capa: { total: capaTotal, open: capaOpen, done: capaTotal - capaOpen, overdue: capaOverdue },
+    capa: { total: capaTotal, open: capaOpen, done: capaTotal - capaOpen, overdue: capaOverdue, awaitingVerification: capaAwaitingVerify, notEffective: capaNotEffective },
     monthly,
     daysSinceLastOverall: daysSince(lastOverall),
     units,
@@ -179,6 +198,7 @@ router.get('/stats', (req, res) => {
     needsAttention,
     recent,
     overdueCapa,
+    hotspots,
     todayPkt,
   });
 });

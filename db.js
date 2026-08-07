@@ -146,6 +146,13 @@ addColumn('incidents', 'voided_at', 'TEXT');
 addColumn('incidents', 'voided_by', 'TEXT');
 addColumn('incidents', 'void_reason', 'TEXT');
 
+// CAPA effectiveness verification: a completed action must be checked (weeks
+// later) to confirm it actually removed the risk before the incident can close.
+addColumn('capa', 'verified_at', 'TEXT');
+addColumn('capa', 'verified_by', 'TEXT');
+addColumn('capa', 'effectiveness', 'TEXT'); // Effective | Not Effective | Recurred
+addColumn('capa', 'verify_note', 'TEXT');
+
 db.exec('CREATE INDEX IF NOT EXISTS idx_incidents_voided ON incidents(voided_at);');
 
 export default db;

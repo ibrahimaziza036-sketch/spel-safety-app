@@ -33,23 +33,29 @@
           <div class="hint">Keep it short. Full details can be added later during the investigation.</div>
         </label>
 
-        <label class="field">
-          <span>Type of incident <span class="req">*</span></span>
-          <select name="type" id="type" required>
-            <option value="">Select type…</option>
-            <option>Injury</option><option>Near-miss</option><option>Fire</option>
-            <option>Chemical spill</option><option>Equipment damage</option><option>Electrical</option>
-            <option>Environmental</option><option>Property damage</option><option>Other</option>
-          </select>
-        </label>
+        <div class="field">
+          <span style="display:block;font-weight:600;font-size:14px;margin-bottom:6px">Type of incident <span class="req">*</span></span>
+          <div class="type-grid" id="typeGrid">
+            <button type="button" class="type-tile" data-type="Injury" aria-pressed="false"><span class="ti-ico">🤕</span><span class="ti-lbl">Injury</span></button>
+            <button type="button" class="type-tile" data-type="Near-miss" aria-pressed="false"><span class="ti-ico">⚠️</span><span class="ti-lbl">Near-miss</span></button>
+            <button type="button" class="type-tile" data-type="Fire" aria-pressed="false"><span class="ti-ico">🔥</span><span class="ti-lbl">Fire</span></button>
+            <button type="button" class="type-tile" data-type="Chemical spill" aria-pressed="false"><span class="ti-ico">🧪</span><span class="ti-lbl">Chemical spill</span></button>
+            <button type="button" class="type-tile" data-type="Equipment damage" aria-pressed="false"><span class="ti-ico">⚙️</span><span class="ti-lbl">Equipment damage</span></button>
+            <button type="button" class="type-tile" data-type="Electrical" aria-pressed="false"><span class="ti-ico">⚡</span><span class="ti-lbl">Electrical</span></button>
+            <button type="button" class="type-tile" data-type="Environmental" aria-pressed="false"><span class="ti-ico">🌍</span><span class="ti-lbl">Environmental</span></button>
+            <button type="button" class="type-tile" data-type="Property damage" aria-pressed="false"><span class="ti-ico">🏚️</span><span class="ti-lbl">Property damage</span></button>
+            <button type="button" class="type-tile" data-type="Other" aria-pressed="false"><span class="ti-ico">❓</span><span class="ti-lbl">Other</span></button>
+          </div>
+          <input type="hidden" name="type" id="type" required />
+        </div>
 
         <div class="field">
           <span style="display:block;font-weight:600;font-size:14px;margin-bottom:6px">Severity <span class="req">*</span></span>
           <div class="sev-select" id="sev">
-            <button type="button" class="Minor" data-sev="Minor" aria-pressed="false">Minor</button>
-            <button type="button" class="Serious" data-sev="Serious" aria-pressed="false">Serious</button>
-            <button type="button" class="Major" data-sev="Major" aria-pressed="false">Major</button>
-            <button type="button" class="Fatal" data-sev="Fatal" aria-pressed="false">Fatal</button>
+            <button type="button" class="Minor" data-sev="Minor" aria-pressed="false"><span class="ti-ico">🟡</span><span class="ti-lbl">Minor</span></button>
+            <button type="button" class="Serious" data-sev="Serious" aria-pressed="false"><span class="ti-ico">🟠</span><span class="ti-lbl">Serious</span></button>
+            <button type="button" class="Major" data-sev="Major" aria-pressed="false"><span class="ti-ico">🔴</span><span class="ti-lbl">Major</span></button>
+            <button type="button" class="Fatal" data-sev="Fatal" aria-pressed="false"><span class="ti-ico">⚫</span><span class="ti-lbl">Fatal</span></button>
           </div>
           <input type="hidden" name="severity" id="severity" required />
         </div>

@@ -21,16 +21,34 @@ const SEVERITY_EMOJI = { Minor: '🟡', Serious: '🟠', Major: '🔴', Fatal: '
 // Stored times are UTC — display them on the PKT wall clock in alerts.
 const fmtDateTime = pktDateTime;
 
+// A repeat event is the clearest signal that a past corrective action failed, so
+// the alert must call it out. Count prior NON-VOIDED incidents of the same type
+// at the same unit within this rolling window (excluding the incident itself).
+export const RECUR_WINDOW_DAYS = 90;
+export function priorSimilarCount(inc, days = RECUR_WINDOW_DAYS) {
+  const ref = inc.occurred_at || inc.created_at;
+  if (!ref || !inc.unit || !inc.type) return 0;
+  const since = new Date(Date.parse(ref) - days * 86400000).toISOString();
+  const row = db.prepare(`
+    SELECT COUNT(*) AS n FROM incidents
+    WHERE voided_at IS NULL AND unit = ? AND type = ? AND id != ?
+      AND COALESCE(occurred_at, created_at) >= ?
+      AND COALESCE(occurred_at, created_at) <= ?
+  `).get(inc.unit, inc.type, inc.id, since, ref);
+  return row?.n || 0;
+}
+
 function esc(s) {
   return String(s ?? '')
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function buildText(inc, link) {
+function buildText(inc, link, recur = 0) {
   const emoji = SEVERITY_EMOJI[inc.severity] || '⚪';
   return [
     `🚨 *SPEL SAFETY ALERT* 🚨`,
+    recur > 0 ? `⚠️ *REPEAT* — ${recur + 1}th ${inc.type} at ${inc.unit} in ${RECUR_WINDOW_DAYS} days` : null,
     `Ref: ${inc.ref_no}`,
     `Unit: ${inc.unit}`,
     `Type: ${inc.type}  |  Severity: ${emoji} ${inc.severity.toUpperCase()}`,
@@ -46,7 +64,7 @@ function buildText(inc, link) {
   ].filter((l) => l !== null).join('\n');
 }
 
-function buildHtml(inc, link) {
+function buildHtml(inc, link, recur = 0) {
   const color = { Minor: '#eab308', Serious: '#f97316', Major: '#dc2626', Fatal: '#111827' }[inc.severity] || '#6b7280';
   return `
   <div style="font-family:Segoe UI,Arial,sans-serif;max-width:620px;margin:0 auto;border:1px solid #e5e7eb;border-radius:10px;overflow:hidden">
@@ -55,6 +73,7 @@ function buildHtml(inc, link) {
       <div style="opacity:.9;font-size:13px">${esc(inc.ref_no)} · ${esc(inc.unit)}</div>
     </div>
     <div style="padding:20px">
+      ${recur > 0 ? `<div style="background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:10px 12px;border-radius:8px;margin-bottom:14px;font-weight:600">⚠️ REPEAT — ${recur + 1}th ${esc(inc.type)} at ${esc(inc.unit)} in the last ${RECUR_WINDOW_DAYS} days. A previous corrective action may not be working.</div>` : ''}
       <table style="width:100%;border-collapse:collapse;font-size:14px">
         <tr><td style="padding:6px 0;color:#6b7280;width:130px">Type</td><td style="padding:6px 0"><b>${esc(inc.type)}</b></td></tr>
         <tr><td style="padding:6px 0;color:#6b7280">Severity</td><td style="padding:6px 0"><b style="color:${color}">${esc(inc.severity.toUpperCase())}</b></td></tr>
@@ -216,8 +235,9 @@ async function deliver(row) {
   if (inc.voided_at) return settle(row, 'skipped', 'incident voided');
 
   const link = `${config.baseUrl}/incident.html?id=${inc.id}`;
-  const text = buildText(inc, link);
-  const html = buildHtml(inc, link);
+  const recur = priorSimilarCount(inc);
+  const text = buildText(inc, link, recur);
+  const html = buildHtml(inc, link, recur);
   const subject = `🚨 ${inc.severity.toUpperCase()} incident — ${inc.unit} (${inc.ref_no})`;
   const imagePath = photoAbsPath(inc.photo_path);
 

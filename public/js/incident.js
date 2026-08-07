@@ -27,7 +27,7 @@ async function load() {
   render(data);
 }
 
-function render({ incident: inc, investigation: inv, capa, history }) {
+function render({ incident: inc, investigation: inv, capa, history, recurrence: recur }) {
   inv = inv || {};
   const hasPhoto = inc.photo_path && inc.photo_path.startsWith('/uploads/');
   const photo = hasPhoto
@@ -44,7 +44,7 @@ function render({ incident: inc, investigation: inv, capa, history }) {
         <div>
           <div style="font-size:13px;color:var(--muted);font-weight:700">${escapeHtml(inc.ref_no || 'INCIDENT')}</div>
           <h1 class="page-title" style="margin:2px 0">${escapeHtml(inc.unit)} — ${escapeHtml(inc.type)}</h1>
-          <div>${sevChip(inc.severity)}</div>
+          <div>${sevChip(inc.severity)}${recur && recur.count > 0 ? ` <span class="chip" style="background:#fef2f2;color:#b91c1c;border:1px solid #fecaca" title="${recur.count} prior similar ${escapeHtml(inc.type)} incident(s) at ${escapeHtml(inc.unit)} in the last ${recur.windowDays} days — a previous corrective action may not be working.">⚠ Repeat · ${recur.count + 1} in ${recur.windowDays}d</span>` : ''}</div>
         </div>
         <label class="field" style="margin:0;min-width:200px">
           <span>Status</span>
@@ -93,7 +93,7 @@ function render({ incident: inc, investigation: inv, capa, history }) {
       <p class="page-sub" style="margin-top:-6px">These actions are what prevent the next incident. Assign an owner and a due date to every action.</p>
       <div class="table-wrap">
         <table class="data" id="capaTbl">
-          <thead><tr><th>Action</th><th>Type</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead>
+          <thead><tr><th>Action</th><th>Type</th><th>Owner</th><th>Due</th><th>Status</th><th>Effectiveness</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -230,27 +230,70 @@ function truncate(val, n = 80) {
   return s.length > n ? s.slice(0, n) + '…' : s;
 }
 
+function effBadge(eff) {
+  if (eff === 'Effective') return '<span class="chip" style="background:#dcfce7;color:#166534;border:1px solid #86efac">✓ Effective</span>';
+  if (eff === 'Not Effective') return '<span class="chip" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5">✗ Not Effective</span>';
+  if (eff === 'Recurred') return '<span class="chip" style="background:#fee2e2;color:#991b1b;border:1px solid #fca5a5">↻ Recurred</span>';
+  return '<span class="chip" style="background:#fef9c3;color:#854d0e;border:1px solid #fde68a">Awaiting check</span>';
+}
+
 function renderCapa(capa) {
   const tbody = document.querySelector('#capaTbl tbody');
-  if (!capa.length) { tbody.innerHTML = '<tr><td colspan="5" class="muted">No actions yet.</td></tr>'; return; }
+  if (!capa.length) { tbody.innerHTML = '<tr><td colspan="6" class="muted">No actions yet.</td></tr>'; return; }
   // Overdue is judged on the PKT calendar date, matching the server so the UI
   // and the dashboard never disagree during early-morning hours in Pakistan.
   const today = META?.todayPkt || new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
+  const effOpt = (cur) => ['Effective', 'Not Effective', 'Recurred']
+    .map((e) => `<option ${e === cur ? 'selected' : ''}>${e}</option>`).join('');
   tbody.innerHTML = capa.map((c) => {
     const overdue = c.status !== 'Done' && c.due_date && c.due_date < today;
     const stSel = ['Open', 'In Progress', 'Done'].map((s) => `<option ${s === c.status ? 'selected' : ''}>${s}</option>`).join('');
+    // Effectiveness cell: only meaningful once the action is Done.
+    let effCell;
+    if (c.status !== 'Done') {
+      effCell = '<span class="muted" style="font-size:12px">Mark Done first</span>';
+    } else {
+      const verifiedMeta = c.verified_by
+        ? ` title="Verified by ${escapeHtml(c.verified_by)}${c.verified_at ? ' on ' + escapeHtml(fmtDate(c.verified_at)) : ''}${c.verify_note ? ' — ' + escapeHtml(c.verify_note) : ''}"`
+        : '';
+      effCell = `<div style="display:flex;flex-direction:column;gap:5px"${verifiedMeta}>
+        ${effBadge(c.effectiveness)}
+        <span style="display:flex;gap:4px;align-items:center">
+          <select class="verify-eff" data-capa="${c.id}" style="padding:5px 6px;font-size:12px;width:auto">
+            <option value="">— set —</option>${effOpt(c.effectiveness)}
+          </select>
+          <button class="btn sm ghost verify-btn" data-capa="${c.id}">Verify</button>
+        </span>
+      </div>`;
+    }
     return `<tr style="cursor:default">
-      <td style="white-space:normal;max-width:320px">${escapeHtml(c.action)}</td>
+      <td style="white-space:normal;max-width:300px">${escapeHtml(c.action)}</td>
       <td>${escapeHtml(c.kind)}</td>
       <td>${escapeHtml(c.owner || '—')}</td>
       <td style="${overdue ? 'color:var(--major);font-weight:700' : ''}">${escapeHtml(c.due_date || '—')}${overdue ? ' ⚠' : ''}</td>
       <td><select data-capa="${c.id}" class="capa-status" style="padding:6px 8px">${stSel}</select></td>
+      <td>${effCell}</td>
     </tr>`;
   }).join('');
   tbody.querySelectorAll('.capa-status').forEach((sel) => {
     sel.addEventListener('change', async () => {
       try { await api('/api/incidents/capa/' + sel.dataset.capa, jsonBody({ status: sel.value }, 'PATCH')); note('ok', 'Action updated.'); load(); }
       catch (err) { note('err', err.message); }
+    });
+  });
+  tbody.querySelectorAll('.verify-btn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const capaId = btn.dataset.capa;
+      const sel = tbody.querySelector('.verify-eff[data-capa="' + capaId + '"]');
+      const eff = sel?.value;
+      if (!eff) return note('err', 'Choose Effective / Not Effective / Recurred first.');
+      let note2 = '';
+      if (eff !== 'Effective') note2 = prompt('Optional note — why was it not effective?') || '';
+      try {
+        await api('/api/incidents/capa/' + capaId + '/verify', jsonBody({ effectiveness: eff, note: note2 }));
+        note('ok', 'Effectiveness recorded.');
+        load();
+      } catch (err) { note('err', err.message); }
     });
   });
 }

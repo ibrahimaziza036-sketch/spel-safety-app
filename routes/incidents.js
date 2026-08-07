@@ -4,7 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { db } from '../db.js';
 import { config, UNITS, INCIDENT_TYPES, SEVERITIES, STATUSES } from '../config.js';
-import { queueIncidentAlerts } from '../services/notify.js';
+import { queueIncidentAlerts, priorSimilarCount, RECUR_WINDOW_DAYS } from '../services/notify.js';
 import { requireAuth, requireRole } from '../services/auth.js';
 import { audit, diffFields, incidentHistory } from '../services/audit.js';
 import { createLimiter, limitMiddleware } from '../services/ratelimit.js';
@@ -247,6 +247,7 @@ router.post('/', intakeLimit,
         description,
         text(b.injured_person, config.intake.maxShortField) || null,
         text(b.reporter_name, config.intake.maxShortField) || null,
+        text(b.reporter_code, config.intake.maxShortField) || null,
         text(b.reporter_contact, config.intake.maxShortField) || null,
         photoPath,
         created,
@@ -355,6 +356,8 @@ router.get('/:id', requireAuth, (req, res) => {
     incident: redactForRole(incident, role),
     investigation, // RCA is safety content (not PII) — visible to all roles
     capa,
+    // Repeat-incident signal: prior similar (same unit+type) events in the window.
+    recurrence: { count: priorSimilarCount(incident), windowDays: RECUR_WINDOW_DAYS },
     history: redactHistoryForRole(incidentHistory(id), role),
   });
 });
@@ -536,6 +539,32 @@ router.patch('/capa/:capaId', canEdit, express.json({ limit: '64kb' }), (req, re
   res.json({ ok: true });
 });
 
+// ---------- VERIFY a CAPA's effectiveness (close-out with proof) ----------
+// A completed action must be checked (weeks later) to confirm it actually
+// removed the risk. This is the gate the incident's closure depends on.
+const EFFECTIVENESS = ['Effective', 'Not Effective', 'Recurred'];
+router.post('/capa/:capaId/verify', canEdit, express.json({ limit: '16kb' }), (req, res) => {
+  const capaId = Number(req.params.capaId);
+  const before = db.prepare('SELECT * FROM capa WHERE id = ?').get(capaId);
+  if (!before) return res.status(404).json({ ok: false, error: 'Not found' });
+  if (before.status !== 'Done') {
+    return res.status(409).json({ ok: false, error: 'Mark the action Done before verifying its effectiveness.' });
+  }
+  const b = req.body || {};
+  if (!EFFECTIVENESS.includes(b.effectiveness)) return res.status(400).json({ ok: false, error: 'Invalid effectiveness value' });
+  const verifyNote = text(b.note, config.intake.maxShortField) || null;
+  db.prepare('UPDATE capa SET effectiveness=?, verify_note=?, verified_by=?, verified_at=? WHERE id=?')
+    .run(b.effectiveness, verifyNote, req.session.user.username, nowIso(), capaId);
+  touchIncident(before.incident_id);
+  const after = db.prepare('SELECT * FROM capa WHERE id = ?').get(capaId);
+  audit(req, {
+    entity: 'capa', entityId: capaId, incidentId: before.incident_id, action: 'update',
+    changes: diffFields(before, after, ['effectiveness', 'verify_note', 'verified_by']),
+    detail: `effectiveness verified: ${b.effectiveness}`,
+  });
+  res.json({ ok: true });
+});
+
 // ---------- UPDATE incident status ----------
 router.patch('/:id/status', canEdit, express.json({ limit: '16kb' }), (req, res) => {
   const id = Number(req.params.id);
@@ -545,6 +574,19 @@ router.patch('/:id/status', canEdit, express.json({ limit: '16kb' }), (req, res)
   if (!before) return res.status(404).json({ ok: false, error: 'Not found' });
   if (before.voided_at) return res.status(409).json({ ok: false, error: 'This record is voided.' });
   if (before.status === b.status) return res.json({ ok: true, unchanged: true });
+
+  // Closure gate: an incident can only close once its corrective/preventive
+  // actions are actually Done AND each Done action has been verified effective.
+  // This is what turns "actions created" into "risk actually reduced".
+  if (b.status === 'Closed') {
+    const rows = db.prepare('SELECT status, effectiveness FROM capa WHERE incident_id = ?').all(id);
+    const openActions = rows.filter((r) => r.status !== 'Done').length;
+    const unverified = rows.filter((r) => r.status === 'Done' && !r.effectiveness).length;
+    const ineffective = rows.filter((r) => r.status === 'Done' && (r.effectiveness === 'Not Effective' || r.effectiveness === 'Recurred')).length;
+    if (openActions) return res.status(409).json({ ok: false, error: `Cannot close: ${openActions} action(s) are not yet marked Done.` });
+    if (unverified) return res.status(409).json({ ok: false, error: `Cannot close: ${unverified} completed action(s) are awaiting effectiveness verification.` });
+    if (ineffective) return res.status(409).json({ ok: false, error: `Cannot close: ${ineffective} action(s) were Not Effective / Recurred — add a new corrective action instead of closing.` });
+  }
 
   db.prepare('UPDATE incidents SET status=?, updated_at=? WHERE id=?').run(b.status, nowIso(), id);
   audit(req, {

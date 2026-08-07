@@ -70,6 +70,32 @@
     </div>
 
     <div class="card" style="margin-bottom:16px">
+      <div class="section-title">🔔 Daily Follow-up Reminders</div>
+      <p class="hint">Once a day, push a digest of overdue actions and incidents past their investigation SLA to the alert recipients (WhatsApp + email). Sent only when something is actually due.</p>
+      <div id="rem-status"></div>
+      <div class="grid cols-2" style="margin-top:10px">
+        <label class="field"><span>Options</span>
+          <span style="display:flex;gap:16px;align-items:center;padding-top:8px">
+            <label style="display:flex;gap:6px;align-items:center;font-weight:500"><input type="checkbox" id="rem_enabled" style="width:auto" /> Enabled</label>
+          </span>
+        </label>
+        <label class="field"><span>Send time (PKT hour, 0–23)</span><input id="rem_hour" type="number" min="0" max="23" placeholder="8" /></label>
+      </div>
+      <div class="section-title" style="font-size:13px;margin-top:6px">Investigation SLA (days before an un-investigated incident is chased)</div>
+      <div class="grid cols-4">
+        <label class="field"><span>Fatal</span><input id="rem_sla_Fatal" type="number" min="1" max="365" /></label>
+        <label class="field"><span>Major</span><input id="rem_sla_Major" type="number" min="1" max="365" /></label>
+        <label class="field"><span>Serious</span><input id="rem_sla_Serious" type="number" min="1" max="365" /></label>
+        <label class="field"><span>Minor</span><input id="rem_sla_Minor" type="number" min="1" max="365" /></label>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn" id="rem_save">Save</button>
+        <button class="btn ghost" id="rem_test">Send now</button>
+        <span id="rem_result" class="hint"></span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
       <div class="section-title">🔗 Unit QR Codes</div>
       <p class="hint">Run <code>npm run qr</code> on the server to generate printable QR codes into <code>public/qr/</code>. Each QR opens the report form pre-set to that unit.</p>
       <div id="qr-links"></div>
