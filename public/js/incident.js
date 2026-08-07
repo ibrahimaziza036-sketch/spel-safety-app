@@ -58,7 +58,7 @@ function render({ incident: inc, investigation: inv, capa, history }) {
             <tr><th>Reported</th><td>${escapeHtml(fmtDate(inc.created_at))}</td></tr>
             <tr><th>Location</th><td>${escapeHtml(inc.location || '—')}</td></tr>
             <tr><th>Injured</th><td>${escapeHtml(inc.injured_person || '—')}</td></tr>
-            <tr><th>Reporter</th><td>${escapeHtml(inc.reporter_name || 'Anonymous')} ${inc.reporter_contact ? '(' + escapeHtml(inc.reporter_contact) + ')' : ''}</td></tr>
+            <tr><th>Reporter</th><td>${escapeHtml(inc.reporter_name || 'Anonymous')}${inc.reporter_code ? ' — ' + escapeHtml(inc.reporter_code) : ''}${inc.reporter_contact ? ' (' + escapeHtml(inc.reporter_contact) + ')' : ''}</td></tr>
           </tbody></table>
         </div>
         <div>
@@ -71,7 +71,7 @@ function render({ incident: inc, investigation: inv, capa, history }) {
 
     <div class="card" style="margin-bottom:16px">
       <div class="section-title">🔍 Investigation — Root Cause</div>
-      <p class="page-sub" style="margin-top:-6px">Kya hua, kaise hua, aur asal wajah. Fill after investigating.</p>
+      <p class="page-sub" style="margin-top:-6px">What happened, how it happened, and the underlying cause. Fill in after investigating.</p>
       <label class="field"><span>What happened (detailed)</span><textarea id="what_happened">${val(inv.what_happened)}</textarea></label>
       <label class="field"><span>How it happened (sequence of events)</span><textarea id="how_happened">${val(inv.how_happened)}</textarea></label>
       <label class="field"><span>Root cause (5-Why — keep asking "why")</span><textarea id="root_cause" placeholder="Why 1: …\nWhy 2: …\nWhy 3: …\nWhy 4: …\nWhy 5 (root cause): …">${val(inv.root_cause)}</textarea></label>
@@ -90,7 +90,7 @@ function render({ incident: inc, investigation: inv, capa, history }) {
 
     <div class="card">
       <div class="section-title">✅ Corrective &amp; Preventive Actions (CAPA)</div>
-      <p class="page-sub" style="margin-top:-6px">Ye actions hi next time incident rokte hain. Har action ka owner aur due date rakho.</p>
+      <p class="page-sub" style="margin-top:-6px">These actions are what prevent the next incident. Assign an owner and a due date to every action.</p>
       <div class="table-wrap">
         <table class="data" id="capaTbl">
           <thead><tr><th>Action</th><th>Type</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead>
@@ -112,7 +112,7 @@ function render({ incident: inc, investigation: inv, capa, history }) {
 
     <div class="card" style="margin-top:16px">
       <div class="section-title">🧾 Record History (audit trail)</div>
-      <p class="page-sub" style="margin-top:-6px">Kis ne kya badla — ye record permanent hai aur mitaya nahi ja sakta.</p>
+      <p class="page-sub" style="margin-top:-6px">Who changed what — this record is permanent and cannot be erased.</p>
       <div id="history"></div>
     </div>
 
@@ -124,7 +124,7 @@ function render({ incident: inc, investigation: inv, capa, history }) {
     </div>` : (IS_ADMIN ? `
     <div class="card" style="margin-top:16px;border-color:#fca5a5">
       <div class="section-title">🗄️ Void this record (admin)</div>
-      <p class="page-sub" style="margin-top:-6px">Duplicate ya galat report ko void karo. Record delete nahi hota — evidence mehfooz rehta hai, sirf reports/dashboard se hat jata hai.</p>
+      <p class="page-sub" style="margin-top:-6px">Void a duplicate or incorrect report. The record is not deleted — the evidence is preserved; it is only removed from reports and the dashboard.</p>
       <label class="field"><span>Reason <span class="req">*</span></span><input id="voidReason" placeholder="e.g. duplicate of INC-2026-0012" /></label>
       <button class="btn danger" id="voidBtn">Void record</button>
     </div>` : '')}
@@ -136,8 +136,8 @@ function render({ incident: inc, investigation: inv, capa, history }) {
   if (IS_ADMIN && !inc.voided_at) {
     document.getElementById('voidBtn')?.addEventListener('click', async () => {
       const reason = v('voidReason');
-      if (!reason) return note('err', 'Void karne ke liye reason likhna zaroori hai.');
-      if (!confirm('Is record ko void karna hai? Reports se hat jayega (delete nahi hoga).')) return;
+      if (!reason) return note('err', 'A reason is required to void this record.');
+      if (!confirm('Void this record? It will be removed from reports (it will not be deleted).')) return;
       try { await api(`/api/incidents/${id}/void`, jsonBody({ reason })); note('ok', 'Record voided.'); load(); }
       catch (err) { note('err', err.message); }
     });

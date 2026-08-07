@@ -40,7 +40,7 @@ function buildText(inc, link) {
     `What happened:`,
     inc.description,
     inc.injured_person ? `\nInjured: ${inc.injured_person}` : null,
-    `\nReported by: ${inc.reporter_name || 'Anonymous'}${inc.reporter_contact ? ' (' + inc.reporter_contact + ')' : ''}`,
+    `\nReported by: ${inc.reporter_name || 'Anonymous'}${inc.reporter_code ? ' [' + inc.reporter_code + ']' : ''}${inc.reporter_contact ? ' (' + inc.reporter_contact + ')' : ''}`,
     ``,
     `Investigate: ${link}`,
   ].filter((l) => l !== null).join('\n');
@@ -62,7 +62,7 @@ function buildHtml(inc, link) {
         <tr><td style="padding:6px 0;color:#6b7280">Location</td><td style="padding:6px 0">${esc(inc.location || '—')}</td></tr>
         <tr><td style="padding:6px 0;color:#6b7280;vertical-align:top">What happened</td><td style="padding:6px 0">${esc(inc.description)}</td></tr>
         ${inc.injured_person ? `<tr><td style="padding:6px 0;color:#6b7280">Injured</td><td style="padding:6px 0">${esc(inc.injured_person)}</td></tr>` : ''}
-        <tr><td style="padding:6px 0;color:#6b7280">Reported by</td><td style="padding:6px 0">${esc(inc.reporter_name || 'Anonymous')}${inc.reporter_contact ? ' (' + esc(inc.reporter_contact) + ')' : ''}</td></tr>
+        <tr><td style="padding:6px 0;color:#6b7280">Reported by</td><td style="padding:6px 0">${esc(inc.reporter_name || 'Anonymous')}${inc.reporter_code ? ' [' + esc(inc.reporter_code) + ']' : ''}${inc.reporter_contact ? ' (' + esc(inc.reporter_contact) + ')' : ''}</td></tr>
       </table>
       <div style="margin-top:20px">
         <a href="${esc(link)}" style="background:#1d4ed8;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600;display:inline-block">Open &amp; Investigate →</a>

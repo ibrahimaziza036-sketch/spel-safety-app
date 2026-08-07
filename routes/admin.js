@@ -1,6 +1,7 @@
 import express from 'express';
 import { whatsAppStatus, getQrDataUrl } from '../services/whatsapp.js';
-import { emailStatus, verifyEmail } from '../services/email.js';
+import { emailStatus, verifyEmail, effectiveEmail, sendAdminEmail } from '../services/email.js';
+import { getJSON, setJSON } from '../services/settings.js';
 import { db } from '../db.js';
 import { ROLES } from '../config.js';
 import { createUser, findUser } from '../services/auth.js';
@@ -51,6 +52,45 @@ router.get('/whatsapp/qr', async (req, res) => {
 router.get('/email/status', (req, res) => res.json({ ok: true, ...emailStatus() }));
 
 router.get('/email/verify', async (req, res) => res.json({ ok: true, ...(await verifyEmail()) }));
+
+// ---- SMTP config via GUI (password write-only, never returned) ----
+router.get('/email/config', (req, res) => {
+  const e = effectiveEmail();
+  res.json({
+    ok: true,
+    enabled: e.enabled, host: e.host, port: e.port, secure: e.secure,
+    user: e.user, from: e.from, hasPassword: Boolean(e.pass),
+  });
+});
+
+router.post('/email/config', express.json({ limit: '8kb' }), (req, res) => {
+  const b = req.body || {};
+  const current = getJSON('email_config') || {};
+  const next = {
+    enabled: !!b.enabled,
+    host: String(b.host || '').trim(),
+    port: Number(b.port) || 587,
+    secure: !!b.secure,
+    user: String(b.user || '').trim(),
+    from: String(b.from || '').trim(),
+    // Keep the existing password unless a new non-empty one is provided.
+    pass: (typeof b.pass === 'string' && b.pass.length) ? b.pass : (current.pass ?? ''),
+  };
+  if (next.enabled && !next.host) return res.status(400).json({ ok: false, error: 'SMTP host required to enable email' });
+  setJSON('email_config', next);
+  audit(req, { entity: 'system', action: 'email_config', detail: `enabled=${next.enabled} host=${next.host}` });
+  res.json({ ok: true });
+});
+
+// Send a real test email to the configured recipients.
+router.post('/email/test', async (req, res) => {
+  const r = await sendAdminEmail({
+    subject: '✅ SPEL Safety — test email',
+    text: 'This is a test email. If you received it, email alerts are configured correctly.',
+  });
+  audit(req, { entity: 'system', action: 'email_test', detail: r.ok ? 'sent' : ('failed: ' + r.reason) });
+  res.json({ ok: r.ok, error: r.ok ? undefined : r.reason });
+});
 
 // Recent notification attempts, for troubleshooting delivery.
 router.get('/notifications', (req, res) => {

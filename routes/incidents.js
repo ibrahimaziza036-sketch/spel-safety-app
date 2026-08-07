@@ -114,7 +114,7 @@ const text = (v, max) => {
  * Viewers may see the safety facts but not the personal details. Officers and
  * admins see the full record.
  */
-const PII_FIELDS = ['injured_person', 'reporter_contact', 'reporter_name'];
+const PII_FIELDS = ['injured_person', 'reporter_contact', 'reporter_name', 'reporter_code'];
 
 function canSeePii(role) {
   return role === 'safety_officer' || role === 'admin';
@@ -123,12 +123,13 @@ function canSeePii(role) {
 function redactForRole(incident, role) {
   if (!incident) return incident;
   if (canSeePii(role)) return incident;
-  const { injured_person, reporter_contact, reporter_name, photo_path, ...rest } = incident;
+  const { injured_person, reporter_contact, reporter_name, reporter_code, photo_path, ...rest } = incident;
   return {
     ...rest,
     injured_person: injured_person ? '(restricted)' : null,
     reporter_contact: reporter_contact ? '(restricted)' : null,
     reporter_name: reporter_name ? '(restricted)' : null,
+    reporter_code: reporter_code ? '(restricted)' : null,
     photo_path: null,
     pii_restricted: true,
   };
@@ -222,8 +223,8 @@ router.post('/', intakeLimit,
   const insertIncident = db.prepare(`
     INSERT INTO incidents
       (ref_no, unit, location, occurred_at, type, severity, description,
-       injured_person, reporter_name, reporter_contact, photo_path, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Open', ?, ?)
+       injured_person, reporter_name, reporter_code, reporter_contact, photo_path, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Open', ?, ?)
   `);
   const nextSeq = db.prepare(
     `SELECT MAX(CAST(substr(ref_no, 10) AS INTEGER)) AS n FROM incidents WHERE ref_no LIKE ?`

@@ -4,47 +4,86 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Safety Dashboard — SPEL</title>
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/css/style.css" />
 </head>
 <body>
   <div id="nav"></div>
   <div class="wrap">
-    <h1 class="page-title">Safety Dashboard</h1>
-    <p class="page-sub">Live view of incidents across all SPEL units.</p>
+    <div class="dash-head">
+      <div>
+        <h1 class="page-title">Safety Dashboard</h1>
+        <p class="page-sub" id="dash-sub">A quick look at whether reported incidents are being acted on.</p>
+      </div>
+      <div class="range-filter" id="range" role="tablist" aria-label="Time range">
+        <button data-range="30d">30 days</button>
+        <button data-range="ytd">This year</button>
+        <button data-range="all" class="active">All time</button>
+      </div>
+    </div>
 
     <div id="channel-alarm"></div>
     <div id="banner"></div>
 
+    <!-- KPI row -->
     <div class="grid cols-4" id="kpis" style="margin-bottom:16px"></div>
 
+    <!-- HERO: incident follow-through -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title">
+        🔧 Incident follow-through
+        <span class="muted" id="fu-range" style="font-weight:500;font-size:13px"></span>
+        <span class="info" tabindex="0" data-tip="How far each reported incident has progressed: reported → investigated → corrective actions (CAPA) created → closed. A wider gap means incidents are not being acted on.">i</span>
+      </div>
+      <div id="followup"></div>
+    </div>
+
+    <!-- Two action lists -->
     <div class="grid cols-2" style="margin-bottom:16px">
       <div class="card">
-        <div class="section-title">📊 Incidents by Unit</div>
-        <canvas id="unitChart" height="220"></canvas>
+        <div class="section-title">⚠️ Needs attention
+          <span class="info" tabindex="0" data-tip="Open incidents that have not yet been investigated, or that have stayed open for a long time (no action taken / reason unclear). Oldest first.">i</span>
+        </div>
+        <div id="needs"></div>
       </div>
       <div class="card">
-        <div class="section-title">📈 Monthly Trend</div>
-        <canvas id="trendChart" height="220"></canvas>
+        <div class="section-title">⏰ Overdue actions
+          <span class="info" tabindex="0" data-tip="CAPA (corrective/preventive actions) whose due date has passed and are still not Done. The owner needs to follow up.">i</span>
+        </div>
+        <div id="overdue"></div>
       </div>
     </div>
 
+    <!-- Recent incidents with action status -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="section-title">🕒 Recent incidents</div>
+      <div class="table-wrap">
+        <table class="data" id="recentTbl">
+          <thead><tr><th>Ref</th><th>When</th><th>Unit</th><th>Type</th><th>Severity</th><th>Progress</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p id="recent-empty" class="muted" style="display:none;padding:16px 0;text-align:center">No incidents yet.</p>
+    </div>
+
+    <!-- Charts -->
     <div class="grid cols-2" style="margin-bottom:16px">
       <div class="card">
-        <div class="section-title">⚠️ By Severity</div>
-        <canvas id="sevChart" height="220"></canvas>
+        <div class="section-title">📈 Monthly trend <span class="muted" style="font-weight:500;font-size:13px">(last 12 months)</span></div>
+        <div class="chart-box"><canvas id="trendChart"></canvas></div>
       </div>
       <div class="card">
-        <div class="section-title">🏷️ By Type</div>
-        <canvas id="typeChart" height="220"></canvas>
+        <div class="section-title">🏭 Incidents by unit <span class="muted" id="unit-range" style="font-weight:500;font-size:13px"></span></div>
+        <div class="chart-box"><canvas id="unitChart"></canvas></div>
       </div>
     </div>
 
+    <!-- Unit scorecard -->
     <div class="card">
-      <div class="section-title">🏭 Unit Safety Scorecard</div>
+      <div class="section-title">🏭 Unit safety scorecard</div>
       <div class="table-wrap">
         <table class="data" id="unitTable">
-          <thead><tr><th>Unit</th><th class="right">Total Incidents</th><th class="right">Days Since Last</th></tr></thead>
+          <thead><tr><th>Unit</th><th class="right">Incidents</th><th class="right">Open</th><th class="right">Days since last</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>

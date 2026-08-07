@@ -135,6 +135,8 @@ function addColumn(table, column, definition) {
 }
 
 addColumn('incidents', 'updated_at', 'TEXT');
+// Reporter's employee code (shown alongside the reporter name).
+addColumn('incidents', 'reporter_code', 'TEXT');
 // Recipients (per channel) an alert has already reached, so a retry never
 // re-sends to someone who already got it.
 addColumn('alert_queue', 'sent_to', 'TEXT');

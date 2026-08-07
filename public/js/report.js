@@ -1,10 +1,12 @@
-import { api, getMeta, brandHtml } from './common.js';
+import { api, brandHtml } from './common.js';
 
-// Minimal brand-only header — the report form is public (anonymous workers),
-// so we don't show staff navigation here.
+// Minimal brand-only header — the report form is public (anonymous workers).
 document.getElementById('nav').innerHTML =
   `<div class="topbar"><span class="brand">${brandHtml()}<span class="brand-tag">Incident Report</span></span></div>`;
 
+// The form is FULLY usable the instant this runs — unit/type options and the
+// severity buttons are hardcoded in the HTML, so a QR scan needs ZERO API calls
+// before the worker can start filling it in (fastest possible).
 const params = new URLSearchParams(location.search);
 const preUnit = params.get('unit'); // set by the per-unit QR code
 
@@ -19,37 +21,43 @@ function showBanner(type, msg) {
   banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
-async function init() {
-  const meta = await getMeta();
-
-  const unitSel = document.getElementById('unit');
-  unitSel.innerHTML = '<option value="">Select unit…</option>' +
-    meta.units.map((u) => `<option value="${u}">${u}</option>`).join('');
-  if (preUnit && meta.units.includes(preUnit)) unitSel.value = preUnit;
-
-  document.getElementById('type').innerHTML = '<option value="">Select type…</option>' +
-    meta.types.map((t) => `<option value="${t}">${t}</option>`).join('');
-
-  sevBox.innerHTML = meta.severities.map((s) =>
-    `<button type="button" class="${s}" data-sev="${s}" aria-pressed="false">${s}</button>`).join('');
-  sevBox.querySelectorAll('button').forEach((b) => {
-    b.addEventListener('click', () => {
-      sevBox.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', 'false'));
-      b.setAttribute('aria-pressed', 'true');
-      sevInput.value = b.dataset.sev;
-    });
-  });
-
-  // Default "when" = now (local time, formatted for datetime-local input).
-  const d = new Date();
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  document.getElementById('occurred_at').value = d.toISOString().slice(0, 16);
+// Preselect the unit from the QR (no network needed).
+if (preUnit) {
+  const opt = [...form.unit.options].find((o) => o.value === preUnit);
+  if (opt) form.unit.value = preUnit;
 }
+
+// Severity buttons.
+sevBox.querySelectorAll('button').forEach((b) => {
+  b.addEventListener('click', () => {
+    sevBox.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', 'false'));
+    b.setAttribute('aria-pressed', 'true');
+    sevInput.value = b.dataset.sev;
+  });
+});
+
+// Separate date + time inputs → combined into the hidden occurred_at the server
+// reads (as "YYYY-MM-DDTHH:MM", interpreted as PKT wall-clock).
+const dateEl = document.getElementById('occurred_date');
+const timeEl = document.getElementById('occurred_time');
+const occEl = document.getElementById('occurred_at');
+function combineWhen() {
+  occEl.value = dateEl.value ? (dateEl.value + (timeEl.value ? 'T' + timeEl.value : '')) : '';
+}
+// Default = now (local wall-clock).
+const now = new Date();
+now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+const iso = now.toISOString();
+dateEl.value = iso.slice(0, 10);
+timeEl.value = iso.slice(11, 16);
+dateEl.addEventListener('change', combineWhen);
+timeEl.addEventListener('change', combineWhen);
+combineWhen();
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   banner.innerHTML = '';
-
+  combineWhen();
   if (!form.unit.value) return showBanner('err', 'Please select a unit.');
   if (!form.description.value.trim()) return showBanner('err', 'Please describe what happened.');
   if (!form.type.value) return showBanner('err', 'Please select the incident type.');
@@ -64,8 +72,7 @@ form.addEventListener('submit', async (e) => {
     document.getElementById('ref-no').textContent = data.ref_no;
     if (data.warnings && data.warnings.length) {
       const w = document.createElement('div');
-      w.className = 'banner warn';
-      w.style.marginTop = '14px';
+      w.className = 'banner warn'; w.style.marginTop = '14px';
       w.textContent = data.warnings.join(' ');
       document.getElementById('success-view').appendChild(w);
     }
@@ -78,5 +85,3 @@ form.addEventListener('submit', async (e) => {
 });
 
 document.getElementById('another').addEventListener('click', () => location.reload());
-
-init().catch((err) => showBanner('err', 'Failed to load form: ' + err.message));

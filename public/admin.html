@@ -22,7 +22,7 @@
 
     <div class="card" style="margin-bottom:16px">
       <div class="section-title">📇 Alert Recipients</div>
-      <p class="hint">Jinko har incident ka alert jaye. WhatsApp number (0300… bhi chalega, khud 92 lag jayega) ya email add karo.</p>
+      <p class="hint">People who should receive an alert for every incident. Add a WhatsApp number (0300… works too — 92 is added automatically) or an email.</p>
       <div class="table-wrap">
         <table class="data" id="recips">
           <thead><tr><th>Type</th><th>Recipient</th><th>Label</th><th></th></tr></thead>
@@ -33,7 +33,7 @@
       <div style="border-top:1px solid var(--line);margin-top:14px;padding-top:14px">
         <div class="grid cols-3">
           <label class="field"><span>Type</span><select id="r_channel"><option value="whatsapp">WhatsApp</option><option value="email">Email</option></select></label>
-          <label class="field"><span>Number / Email</span><input id="r_value" placeholder="03001234567  ya  name@spelgroup.com" /></label>
+          <label class="field"><span>Number / Email</span><input id="r_value" placeholder="03001234567  or  name@spelgroup.com" /></label>
           <label class="field"><span>Label (optional)</span><input id="r_label" placeholder="e.g. CEO, GM Safety" /></label>
         </div>
         <button class="btn" id="addRecip">+ Add Recipient</button>
@@ -42,7 +42,31 @@
 
     <div class="card" style="margin-bottom:16px">
       <div class="section-title">✉️ Email (SMTP)</div>
+      <p class="hint">Configure email/SMTP here — no need to touch <code>.env</code>. (Add recipients above under "Alert Recipients".)</p>
       <div id="email-status"></div>
+      <div class="grid cols-2" style="margin-top:10px">
+        <label class="field"><span>SMTP host</span><input id="em_host" placeholder="smtp.office365.com" /></label>
+        <label class="field"><span>Port</span><input id="em_port" placeholder="587" /></label>
+      </div>
+      <div class="grid cols-2">
+        <label class="field"><span>Username (email)</span><input id="em_user" autocomplete="off" placeholder="safety-alerts@spelgroup.com" /></label>
+        <label class="field"><span>Password</span><input id="em_pass" type="password" autocomplete="new-password" placeholder="(unchanged — leave blank to keep the same)" /></label>
+      </div>
+      <div class="grid cols-2">
+        <label class="field"><span>From</span><input id="em_from" placeholder="SPEL Safety &lt;safety@spelgroup.com&gt;" /></label>
+        <label class="field"><span>Options</span>
+          <span style="display:flex;gap:16px;align-items:center;padding-top:8px">
+            <label style="display:flex;gap:6px;align-items:center;font-weight:500"><input type="checkbox" id="em_enabled" style="width:auto" /> Enabled</label>
+            <label style="display:flex;gap:6px;align-items:center;font-weight:500"><input type="checkbox" id="em_secure" style="width:auto" /> SSL (port 465)</label>
+          </span>
+        </label>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+        <button class="btn" id="em_save">Save</button>
+        <button class="btn ghost" id="em_verify">Test SMTP connection</button>
+        <button class="btn ghost" id="em_test">Send test email</button>
+        <span id="em_result" class="hint"></span>
+      </div>
     </div>
 
     <div class="card" style="margin-bottom:16px">
@@ -73,7 +97,7 @@
 
     <div class="card" style="margin-bottom:16px">
       <div class="section-title">📤 Alert Delivery (outbox)</div>
-      <p class="hint">Jo alerts nahi ja sakay wo yahan dikhte hain aur khud dobara try hote hain. Zaroorat ho to manually retry karo.</p>
+      <p class="hint">Alerts that could not be sent appear here and are retried automatically. Retry manually if needed.</p>
       <div id="alerts"></div>
     </div>
 
@@ -86,7 +110,7 @@
 
     <div class="card" style="margin-bottom:16px">
       <div class="section-title">🧾 Audit Trail</div>
-      <p class="hint">Har change ka permanent record — kaun, kab, kya.</p>
+      <p class="hint">A permanent record of every change — who, when, what.</p>
       <div class="table-wrap">
         <table class="data" id="audit">
           <thead><tr><th>When</th><th>Who</th><th>Action</th><th>Record</th><th>Detail</th></tr></thead>

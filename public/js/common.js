@@ -102,9 +102,10 @@ export function brandHtml() {
 }
 
 export function navbar(active) {
+  // Phase-1 menu: Dashboard, Report, and Admin (Admin shows for admins only —
+  // mountSession() removes it for other roles). The incidents-list is archived.
   const links = [
     ['/', 'Dashboard'],
-    ['/incidents.html', 'Incidents'],
     ['/report.html', 'Report Incident'],
     ['/admin.html', 'Admin'],
   ];

@@ -10,26 +10,76 @@ const NOT_VOID = 'voided_at IS NULL';
 // The event's own time is the reporting reference, not when it was filed.
 const EVENT_TIME = 'COALESCE(occurred_at, created_at)';
 
-function countBy(column) {
-  return db.prepare(
-    `SELECT ${column} AS key, COUNT(*) AS n FROM incidents WHERE ${NOT_VOID} GROUP BY ${column} ORDER BY n DESC`
-  ).all();
+/** Resolve a range key to UTC ISO bounds + the previous equal-length window. */
+function rangeBounds(range) {
+  const now = Date.now();
+  if (range === '30d') {
+    return {
+      key: '30d', label: 'Last 30 days',
+      start: new Date(now - 30 * 86400000).toISOString(),
+      prevStart: new Date(now - 60 * 86400000).toISOString(),
+      prevEnd: new Date(now - 30 * 86400000).toISOString(),
+    };
+  }
+  if (range === 'ytd') {
+    const pk = new Date(now + PKT_OFFSET_MS);
+    const yearStart = Date.UTC(pk.getUTCFullYear(), 0, 1) - PKT_OFFSET_MS; // Jan 1, 00:00 PKT
+    const windowLen = now - yearStart;
+    return {
+      key: 'ytd', label: 'This year',
+      start: new Date(yearStart).toISOString(),
+      prevStart: new Date(yearStart - windowLen).toISOString(),
+      prevEnd: new Date(yearStart).toISOString(),
+    };
+  }
+  return { key: 'all', label: 'All time', start: null, prevStart: null, prevEnd: null };
 }
 
 router.get('/stats', (req, res) => {
-  const total = db.prepare(`SELECT COUNT(*) AS n FROM incidents WHERE ${NOT_VOID}`).get().n;
+  const rb = rangeBounds(String(req.query.range || 'all'));
+  const rangeWhere = rb.start ? ` AND ${EVENT_TIME} >= ?` : '';
+  const rangeArgs = rb.start ? [rb.start] : [];
 
-  const byStatus = Object.fromEntries(countBy('status').map((r) => [r.key, r.n]));
+  const countBy = (col) => db.prepare(
+    `SELECT ${col} AS key, COUNT(*) AS n FROM incidents WHERE ${NOT_VOID}${rangeWhere} GROUP BY ${col} ORDER BY n DESC`
+  ).all(...rangeArgs);
+
+  // ---- period volume + delta vs previous equal window ----
+  const total = db.prepare(`SELECT COUNT(*) AS n FROM incidents WHERE ${NOT_VOID}${rangeWhere}`).get(...rangeArgs).n;
+  let prevTotal = null;
+  let deltaPct = null;
+  if (rb.prevStart) {
+    prevTotal = db.prepare(
+      `SELECT COUNT(*) AS n FROM incidents WHERE ${NOT_VOID} AND ${EVENT_TIME} >= ? AND ${EVENT_TIME} < ?`
+    ).get(rb.prevStart, rb.prevEnd).n;
+    if (prevTotal > 0) deltaPct = Math.round(((total - prevTotal) / prevTotal) * 100);
+  }
+
+  const bySeverity = countBy('severity');
   const byUnit = countBy('unit');
   const byType = countBy('type');
-  const bySeverity = countBy('severity');
 
-  // Last 12 calendar months trend, in PKT (UTC+5), with zero-incident months
-  // included so a quiet month reads as 0 instead of vanishing from the chart.
-  const monthRows = db.prepare(`
-    SELECT strftime('%Y-%m', datetime(${EVENT_TIME}, '${PKT_SQL_SHIFT}')) AS month, COUNT(*) AS n
-    FROM incidents WHERE ${NOT_VOID} GROUP BY month
-  `).all();
+  // Near-miss share — a LEADING indicator: lots of near-miss reporting is healthy.
+  const nearMiss = (byType.find((t) => t.key === 'Near-miss') || {}).n || 0;
+  const nearMissShare = { nearMiss, total, pct: total ? Math.round((nearMiss / total) * 100) : 0 };
+
+  // ---- current status (not range-dependent) ----
+  const byStatus = Object.fromEntries(
+    db.prepare(`SELECT status, COUNT(*) AS n FROM incidents WHERE ${NOT_VOID} GROUP BY status`).all().map((r) => [r.status, r.n])
+  );
+  const openNow = (byStatus.Open || 0) + (byStatus['Under Investigation'] || 0);
+
+  const capaTotal = db.prepare(`SELECT COUNT(*) AS n FROM capa c JOIN incidents i ON i.id=c.incident_id WHERE i.${NOT_VOID}`).get().n;
+  const capaOpen = db.prepare(`SELECT COUNT(*) AS n FROM capa c JOIN incidents i ON i.id=c.incident_id WHERE i.${NOT_VOID} AND c.status!='Done'`).get().n;
+  const todayPkt = pktDate();
+  const capaOverdue = db.prepare(
+    `SELECT COUNT(*) AS n FROM capa c JOIN incidents i ON i.id=c.incident_id WHERE i.${NOT_VOID} AND c.status!='Done' AND c.due_date IS NOT NULL AND c.due_date < ?`
+  ).get(todayPkt).n;
+
+  // ---- 12-month trend (always; PKT months, zero-filled) ----
+  const monthRows = db.prepare(
+    `SELECT strftime('%Y-%m', datetime(${EVENT_TIME}, '${PKT_SQL_SHIFT}')) AS month, COUNT(*) AS n FROM incidents WHERE ${NOT_VOID} GROUP BY month`
+  ).all();
   const monthMap = Object.fromEntries(monthRows.map((r) => [r.month, r.n]));
   const nowPkt = new Date(Date.now() + PKT_OFFSET_MS);
   const monthly = [];
@@ -39,55 +89,96 @@ router.get('/stats', (req, res) => {
     monthly.push({ month: key, n: monthMap[key] || 0 });
   }
 
-  // CAPA health. "Overdue" is judged against today's PKT date so the count does
-  // not flip during the early-morning hours in Pakistan.
-  const capaTotal = db.prepare(`
-    SELECT COUNT(*) AS n FROM capa c JOIN incidents i ON i.id = c.incident_id WHERE i.${NOT_VOID}
-  `).get().n;
-  const capaOpen = db.prepare(`
-    SELECT COUNT(*) AS n FROM capa c JOIN incidents i ON i.id = c.incident_id
-    WHERE i.${NOT_VOID} AND c.status != 'Done'
-  `).get().n;
-  const capaDone = capaTotal - capaOpen;
-  const todayPkt = pktDate();
-  const capaOverdue = db.prepare(`
-    SELECT COUNT(*) AS n FROM capa c JOIN incidents i ON i.id = c.incident_id
-    WHERE i.${NOT_VOID} AND c.status != 'Done' AND c.due_date IS NOT NULL AND c.due_date < ?
-  `).get(todayPkt).n;
-
-  // Days since last incident (overall + per unit), based on when the incident
-  // actually occurred. A future-dated value is clamped to now so the counter
-  // cannot be forced to 0 by a bad date.
-  const lastOverall = db.prepare(
-    `SELECT MAX(${EVENT_TIME}) AS last FROM incidents WHERE ${NOT_VOID}`
-  ).get().last;
+  // ---- days since last (current) ----
   const daysSince = (iso) => {
     if (!iso) return null;
     const t = Math.min(Date.parse(iso), Date.now());
-    if (Number.isNaN(t)) return null;
-    return Math.max(0, Math.floor((Date.now() - t) / 86400000));
+    return Number.isNaN(t) ? null : Math.max(0, Math.floor((Date.now() - t) / 86400000));
   };
-  const perUnitLast = db.prepare(
-    `SELECT unit, MAX(${EVENT_TIME}) AS last, COUNT(*) AS n FROM incidents WHERE ${NOT_VOID} GROUP BY unit`
-  ).all();
-  const unitMap = Object.fromEntries(perUnitLast.map((r) => [r.unit, r]));
+  const lastOverall = db.prepare(`SELECT MAX(${EVENT_TIME}) AS last FROM incidents WHERE ${NOT_VOID}`).get().last;
+
+  // ---- unit scorecard (count in range; streak + open current) ----
+  const unitAgg = Object.fromEntries(byUnit.map((r) => [r.key, r.n]));
+  const unitLast = Object.fromEntries(
+    db.prepare(`SELECT unit, MAX(${EVENT_TIME}) AS last FROM incidents WHERE ${NOT_VOID} GROUP BY unit`).all().map((r) => [r.unit, r.last])
+  );
+  const unitOpen = Object.fromEntries(
+    db.prepare(`SELECT unit, COUNT(*) AS n FROM incidents WHERE ${NOT_VOID} AND status!='Closed' GROUP BY unit`).all().map((r) => [r.unit, r.n])
+  );
   const units = UNITS.map((u) => ({
     unit: u,
-    count: unitMap[u]?.n || 0,
-    daysSinceLast: unitMap[u] ? daysSince(unitMap[u].last) : null,
+    count: unitAgg[u] || 0,
+    open: unitOpen[u] || 0,
+    daysSinceLast: unitLast[u] ? daysSince(unitLast[u]) : null,
+  }));
+
+  // ---- FOLLOW-THROUGH (the heart): are reported incidents being acted on? ----
+  // For incidents in the selected range: how far did each progress?
+  const stage = (extra) => db.prepare(
+    `SELECT COUNT(*) AS n FROM incidents i WHERE i.${NOT_VOID}${rb.start ? ` AND ${EVENT_TIME} >= ?` : ''} AND ${extra}`
+  ).get(...rangeArgs).n;
+  const followup = {
+    reported: total,
+    investigated: stage('EXISTS (SELECT 1 FROM investigations v WHERE v.incident_id = i.id)'),
+    withActions: stage('EXISTS (SELECT 1 FROM capa c WHERE c.incident_id = i.id)'),
+    closed: stage("i.status = 'Closed'"),
+  };
+
+  // ---- "Needs attention": reported but NOT acted on (no action taken / reason unclear) ----
+  // Any non-closed incident that either has no investigation yet, or has been
+  // open too long. Ordered oldest-first (most neglected on top).
+  const STALE_DAYS = 7;
+  const openRows = db.prepare(`
+    SELECT i.id, i.ref_no, i.unit, i.severity, i.status, ${EVENT_TIME} AS at,
+      (SELECT 1 FROM investigations v WHERE v.incident_id = i.id) AS investigated,
+      (SELECT COUNT(*) FROM capa c WHERE c.incident_id = i.id AND c.status != 'Done') AS openActions
+    FROM incidents i WHERE i.${NOT_VOID} AND i.status != 'Closed'
+    ORDER BY at ASC
+  `).all();
+  const needsAttention = [];
+  for (const r of openRows) {
+    const ageDays = daysSince(r.at) ?? 0;
+    let reason = null;
+    if (!r.investigated) reason = 'No investigation started';
+    else if (r.openActions > 0 && ageDays >= STALE_DAYS) reason = `${r.openActions} action(s) pending · open ${ageDays}d`;
+    else if (ageDays >= STALE_DAYS) reason = `Open ${ageDays} days, not closed`;
+    if (reason) needsAttention.push({ id: r.id, ref_no: r.ref_no, unit: r.unit, severity: r.severity, status: r.status, ageDays, reason });
+    if (needsAttention.length >= 8) break;
+  }
+
+  // ---- actionable lists ----
+  const recent = db.prepare(`
+    SELECT i.id, i.ref_no, i.unit, i.type, i.severity, i.status, ${EVENT_TIME} AS at,
+      (SELECT 1 FROM investigations v WHERE v.incident_id = i.id) AS investigated,
+      (SELECT COUNT(*) FROM capa c WHERE c.incident_id = i.id) AS capaCount
+    FROM incidents i WHERE i.${NOT_VOID} ORDER BY i.id DESC LIMIT 6
+  `).all();
+
+  const overdueCapa = db.prepare(`
+    SELECT c.id, c.incident_id, c.action, c.owner, c.due_date, i.ref_no, i.unit
+    FROM capa c JOIN incidents i ON i.id=c.incident_id
+    WHERE i.${NOT_VOID} AND c.status!='Done' AND c.due_date IS NOT NULL AND c.due_date < ?
+    ORDER BY c.due_date ASC LIMIT 6
+  `).all(todayPkt).map((r) => ({
+    ...r,
+    daysOverdue: Math.max(0, Math.floor((Date.now() - Date.parse(r.due_date + 'T00:00:00Z')) / 86400000)),
   }));
 
   res.json({
     ok: true,
-    total,
-    byStatus,
-    byUnit,
-    byType,
-    bySeverity,
+    range: { key: rb.key, label: rb.label },
+    period: { total, prevTotal, deltaPct },
+    bySeverity, byUnit, byType,
+    nearMissShare,
+    byStatus, openNow,
+    capa: { total: capaTotal, open: capaOpen, done: capaTotal - capaOpen, overdue: capaOverdue },
     monthly,
-    capa: { total: capaTotal, open: capaOpen, done: capaDone, overdue: capaOverdue },
     daysSinceLastOverall: daysSince(lastOverall),
     units,
+    followup,
+    needsAttention,
+    recent,
+    overdueCapa,
     todayPkt,
   });
 });

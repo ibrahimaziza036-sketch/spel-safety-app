@@ -146,6 +146,59 @@ table.data tr:hover td { background: #f8fafc; cursor: pointer; }
 .banner.warn { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
 
 canvas { max-width: 100%; }
+/* Chart.js with maintainAspectRatio:false needs a definite-height parent, or it
+   grows unbounded on each resize. A relative box with a fixed height is the
+   standard responsive container — Chart.js fills it (no absolute positioning). */
+.chart-box { position: relative; height: 240px; width: 100%; }
+
+/* ---------- dashboard head + range filter ---------- */
+.dash-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.range-filter { display: inline-flex; background: #eef2f7; border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
+.range-filter button { border: none; background: transparent; color: var(--muted); font-weight: 700; font-size: 13px; padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+.range-filter button:hover { color: var(--ink); }
+.range-filter button.active { background: #fff; color: var(--blue); box-shadow: var(--shadow); }
+
+/* ---------- info tooltip (hover/focus) ---------- */
+.info { display: inline-flex; align-items: center; justify-content: center; width: 15px; height: 15px; border-radius: 50%; background: #cbd5e1; color: #fff; font-size: 10px; font-weight: 800; font-style: normal; cursor: help; margin-left: 4px; position: relative; vertical-align: middle; }
+.info:hover, .info:focus { background: var(--blue); outline: none; }
+.info::after { content: attr(data-tip); position: absolute; bottom: 160%; left: 50%; transform: translateX(-50%); background: #0f172a; color: #fff; padding: 8px 11px; border-radius: 8px; font-size: 12px; font-weight: 500; line-height: 1.45; width: max-content; max-width: 260px; white-space: normal; text-align: left; opacity: 0; pointer-events: none; transition: opacity .12s; z-index: 70; box-shadow: 0 6px 18px rgba(15, 23, 42, .22); }
+.info::before { content: ''; position: absolute; bottom: 160%; left: 50%; width: 9px; height: 9px; background: #0f172a; transform: translate(-50%, 55%) rotate(45deg); opacity: 0; transition: opacity .12s; z-index: 70; }
+.info:hover::after, .info:focus::after, .info:hover::before, .info:focus::before { opacity: 1; }
+
+/* ---------- KPI delta ---------- */
+.kpi-delta { display: block; font-size: 12.5px; font-weight: 700; margin-top: 8px; }
+
+/* ---------- follow-through funnel ---------- */
+.fu-insight { font-size: 13.5px; font-weight: 600; padding: 8px 12px; border-radius: 8px; margin-bottom: 14px; }
+.fu-insight.warn { background: #fef3c7; color: #92400e; }
+.fu-insight.ok { background: #dcfce7; color: #166534; }
+.fu-grid { display: flex; flex-direction: column; gap: 10px; }
+.fu-row { display: grid; grid-template-columns: 120px 1fr 92px; align-items: center; gap: 12px; }
+.fu-label { font-size: 13px; font-weight: 600; color: var(--ink); }
+.fu-bar { background: #eef2f7; border-radius: 999px; height: 12px; overflow: hidden; }
+.fu-fill { height: 100%; border-radius: 999px; transition: width .5s ease; }
+.fu-val { font-size: 13px; text-align: right; }
+@media (max-width: 560px) { .fu-row { grid-template-columns: 96px 1fr 70px; gap: 8px; } }
+
+/* severity strip */
+.sev-strip { display: flex; height: 12px; border-radius: 999px; overflow: hidden; margin-top: 18px; gap: 2px; background: #eef2f7; }
+.sev-strip span { display: block; }
+.sev-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+.sev-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: middle; }
+.sev-legend b { color: var(--ink); }
+
+/* ---------- action list rows ---------- */
+.row-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 4px; border-bottom: 1px solid var(--line); text-decoration: none; color: var(--ink); }
+.row-item:last-child { border-bottom: none; }
+.row-item:hover { background: #f8fafc; }
+.ri-main { font-size: 14px; display: flex; align-items: center; gap: 7px; min-width: 0; }
+.ri-main b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ri-reason { font-size: 12.5px; text-align: right; white-space: nowrap; display: flex; align-items: center; gap: 8px; }
+
+/* ---------- progress chips (recent incidents) ---------- */
+.prog-done { background: #dcfce7; color: #166534; }
+.prog-ok { background: #dbeafe; color: #1e40af; }
+.prog-todo { background: #fee2e2; color: #991b1b; }
 
 /* success screen (report submitted) */
 .success { text-align: center; padding: 40px 20px; }

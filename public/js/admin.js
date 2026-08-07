@@ -35,25 +35,58 @@ async function loadWa() {
 
 async function loadEmail() {
   try {
-    const s = await api('/api/admin/email/status');
+    const [s, cfg] = await Promise.all([api('/api/admin/email/status'), api('/api/admin/email/config')]);
     const cls = s.configured ? (s.enabled ? 'ok' : 'warn') : 'err';
-    const txt = !s.configured ? 'SMTP not configured' : s.enabled ? 'Email enabled' : 'Email disabled';
+    const txt = !s.configured ? 'SMTP not configured' : s.enabled ? 'Email enabled ✓' : 'Email configured but disabled';
     document.getElementById('email-status').innerHTML =
       `<div class="banner ${cls}">${txt}</div>
-       <div class="hint">From: ${s.from || '—'}</div>
-       <div class="hint">Recipients: ${(s.recipients || []).join(', ') || '(none set)'}</div>
-       <button class="btn ghost sm" id="verify">Test SMTP connection</button>
-       <span id="verify-result" class="hint"></span>`;
-    document.getElementById('verify').addEventListener('click', async () => {
-      const r = document.getElementById('verify-result');
-      r.textContent = ' testing…';
-      try { const res = await api('/api/admin/email/verify'); r.textContent = res.ok ? ' ✓ SMTP OK' : ' ✗ ' + res.reason; }
-      catch (err) { r.textContent = ' ✗ ' + err.message; }
-    });
+       <div class="hint">Recipients: ${escapeHtml((s.recipients || []).join(', ') || '(none — add above)')}</div>`;
+    // Populate the form (password left blank; placeholder shows if one is stored).
+    document.getElementById('em_host').value = cfg.host || '';
+    document.getElementById('em_port').value = cfg.port || 587;
+    document.getElementById('em_user').value = cfg.user || '';
+    document.getElementById('em_from').value = cfg.from || '';
+    document.getElementById('em_enabled').checked = !!cfg.enabled;
+    document.getElementById('em_secure').checked = !!cfg.secure;
+    document.getElementById('em_pass').placeholder = cfg.hasPassword ? '(password stored — leave blank to keep the same)' : 'SMTP password / app-password';
   } catch (err) {
-    document.getElementById('email-status').innerHTML = `<div class="banner err">${err.message}</div>`;
+    document.getElementById('email-status').innerHTML = `<div class="banner err">${escapeHtml(err.message)}</div>`;
   }
 }
+
+function emResult(msg) { document.getElementById('em_result').textContent = ' ' + msg; }
+
+document.getElementById('em_save').addEventListener('click', async () => {
+  emResult('saving…');
+  const body = {
+    enabled: document.getElementById('em_enabled').checked,
+    host: document.getElementById('em_host').value.trim(),
+    port: document.getElementById('em_port').value.trim(),
+    secure: document.getElementById('em_secure').checked,
+    user: document.getElementById('em_user').value.trim(),
+    from: document.getElementById('em_from').value.trim(),
+  };
+  const pass = document.getElementById('em_pass').value;
+  if (pass) body.pass = pass; // only send if changed
+  try {
+    await api('/api/admin/email/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    document.getElementById('em_pass').value = '';
+    emResult('✓ saved');
+    loadEmail();
+  } catch (err) { emResult('✗ ' + err.message); }
+});
+
+document.getElementById('em_verify').addEventListener('click', async () => {
+  emResult('testing connection…');
+  try { const r = await api('/api/admin/email/verify'); emResult(r.ok ? '✓ SMTP connection OK' : '✗ ' + r.reason); }
+  catch (err) { emResult('✗ ' + err.message); }
+});
+
+document.getElementById('em_test').addEventListener('click', async () => {
+  emResult('sending test…');
+  try { const r = await api('/api/admin/email/test', { method: 'POST' }); emResult(r.ok ? '✓ test email sent (check inbox)' : '✗ ' + (r.error || 'failed')); }
+  catch (err) { emResult('✗ ' + err.message); }
+});
 
 async function loadQrLinks() {
   const meta = await getMeta();

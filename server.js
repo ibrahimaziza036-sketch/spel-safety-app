@@ -180,7 +180,19 @@ app.use((req, res, next) => {
 });
 
 // Static front-end. "/" -> dashboard.
-app.use(express.static(path.join(__dirname, 'public')));
+// Code (JS/CSS/SVG/HTML) is 'no-cache' — the browser still caches it but MUST
+// revalidate (a cheap ETag 304 when unchanged), so a deploy never serves a stale
+// dashboard.js against a changed backend. Only truly-stable binary assets get a
+// long max-age. (Revalidation keeps the QR report page effectively instant.)
+app.use(express.static(path.join(__dirname, 'public'), {
+  setHeaders: (res, filePath) => {
+    if (/\.(?:png|jpg|jpeg|gif|webp|ico|woff2?)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // stable binaries: 1 day
+    } else if (/\.(?:css|js|mjs|svg|html)$/i.test(filePath)) {
+      res.setHeader('Cache-Control', 'no-cache'); // revalidate — never serve stale code
+    }
+  },
+}));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'dashboard.html')));
 
 // Errors -> JSON. Client faults keep their message; server faults are generic so

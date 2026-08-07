@@ -62,7 +62,7 @@ function run(cmd, args = [], { optional = false, cwd = ROOT } = {}) {
   const r = spawnSync(printable, { cwd, stdio: 'inherit', shell: true });
   if (r.status !== 0 && !optional) {
     line(`\n\x1b[31m✗ Command failed: ${printable}\x1b[0m`);
-    line('  Ise theek karke setup dobara chala sakte hain (safe to re-run).');
+    line('  Fix it and run setup again (safe to re-run).');
     process.exit(1);
   }
   return r;
@@ -82,33 +82,33 @@ async function main() {
   line('\n==================================================');
   line('  SPEL Safety — Server Setup');
   line('==================================================');
-  if (DRY) line('  (DRY RUN — kuch execute nahi hoga, sirf preview)\n');
+  if (DRY) line('  (DRY RUN — nothing will execute, preview only)\n');
 
   // ---- Preflight ----
   step(1, 'Checking prerequisites');
   const [maj, min] = process.versions.node.split('.').map(Number);
   if (maj < 22 || (maj === 22 && min < 5)) {
-    line(`\x1b[31m✗ Node ${process.versions.node} — chahiye 22.5+ (built-in SQLite ke liye). Node upgrade karein.\x1b[0m`);
+    line(`\x1b[31m✗ Node ${process.versions.node} — needs 22.5+ (for built-in SQLite). Please upgrade Node.\x1b[0m`);
     process.exit(1);
   }
   line(`   ✓ Node ${process.versions.node}`);
   const haveCloudflared = has('cloudflared');
-  line(`   ${haveCloudflared ? '✓' : '•'} cloudflared ${haveCloudflared ? 'installed' : 'NOT found (tunnel step skip ho jayega ya install karna hoga)'}`);
+  line(`   ${haveCloudflared ? '✓' : '•'} cloudflared ${haveCloudflared ? 'installed' : 'NOT found (the tunnel step will be skipped, or install it first)'}`);
 
   // ---- Deployment mode ----
   step(2, 'Deployment mode');
-  line('   1) LAN-only  — sirf factory network se access');
-  line('   2) Internet  — Cloudflare Tunnel se kahin se bhi (HTTPS)');
-  const mode = (await ask('   Choose 1 ya 2', '1')) === '2' ? 'internet' : 'lan';
+  line('   1) LAN-only  — access from the factory network only');
+  line('   2) Internet  — from anywhere via Cloudflare Tunnel (HTTPS)');
+  const mode = (await ask('   Choose 1 or 2', '1')) === '2' ? 'internet' : 'lan';
 
   let baseUrl, cookieSecure, trustProxy, tunnelHost = '';
   if (mode === 'lan') {
-    const ip = await ask('   Server ka LAN IP (e.g. 192.168.1.50)', 'localhost');
+    const ip = await ask('   Server LAN IP (e.g. 192.168.1.50)', 'localhost');
     baseUrl = `http://${ip}:3000`; cookieSecure = 'false'; trustProxy = '0';
   } else {
     tunnelHost = await ask('   Public hostname (e.g. safety.spelgroup.com)');
     while (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(tunnelHost)) {
-      tunnelHost = await ask('   Valid hostname likhein (e.g. safety.spelgroup.com)');
+      tunnelHost = await ask('   Enter a valid hostname (e.g. safety.spelgroup.com)');
     }
     baseUrl = `https://${tunnelHost}`; cookieSecure = 'true'; trustProxy = '1';
   }
@@ -116,11 +116,11 @@ async function main() {
   // ---- Credentials / recipients ----
   step(3, 'Admin, email & recipients');
   const adminUser = await ask('   Admin username', 'admin');
-  let adminPass = await ask('   Admin password (khali chhoda to strong bana denge)');
+  let adminPass = await ask('   Admin password (leave blank to auto-generate a strong one)');
   if (!adminPass) { adminPass = randomBytes(9).toString('base64url'); line(`   → generated admin password: \x1b[1m${adminPass}\x1b[0m  (note it!)`); }
 
-  const waNumbers = await ask('   WhatsApp alert numbers, comma-separated (0300… bhi chalega)');
-  const emailOn = await askYN('   Email backup ON karein? (recommended)', false);
+  const waNumbers = await ask('   WhatsApp alert numbers, comma-separated (0300… works too)');
+  const emailOn = await askYN('   Enable email backup? (recommended)', false);
   let smtp = { enabled: 'false', host: '', port: '587', user: '', pass: '', from: '', mgmt: '' };
   if (emailOn) {
     smtp.enabled = 'true';
@@ -136,8 +136,8 @@ async function main() {
   step(4, 'Writing .env (secrets auto-generated)');
   const envPath = path.join(ROOT, '.env');
   if (fs.existsSync(envPath) && !DRY) {
-    const ow = await askYN('   .env pehle se hai — overwrite karun?', false);
-    if (!ow) line('   → .env chhod diya (jaisa hai waisa rahega)');
+    const ow = await askYN('   .env already exists — overwrite?', false);
+    if (!ow) line('   → kept existing .env (unchanged)');
     if (ow) writeEnv();
   } else { writeEnv(); }
   function writeEnv() {
@@ -174,7 +174,7 @@ async function main() {
 
   // ---- Optional demo data ----
   step(6, 'Demo data');
-  if (await askYN('   Demo incidents daalun (test/pitch ke liye)?', false)) {
+  if (await askYN('   Add demo incidents (for testing/pitch)?', false)) {
     run('npm', ['run', 'seed'], { optional: true });
   } else { line('   → skip (empty start)'); }
 
@@ -182,11 +182,11 @@ async function main() {
   if (mode === 'internet') {
     step(7, 'Cloudflare Tunnel');
     if (!haveCloudflared) {
-      line('   \x1b[33m! cloudflared install nahi hai. Install karke setup dobara chalayein:\x1b[0m');
-      line('     winget install --id Cloudflare.cloudflared   (ya https://github.com/cloudflare/cloudflared/releases)');
+      line('   \x1b[33m! cloudflared is not installed. Install it and run setup again:\x1b[0m');
+      line('     winget install --id Cloudflare.cloudflared   (or https://github.com/cloudflare/cloudflared/releases)');
     } else {
-      line('   \x1b[1m>> Browser khulega — apne Cloudflare account se login/authorize karein.\x1b[0m');
-      await ask('   Tayaar hain? Enter dabayein');
+      line('   \x1b[1m>> A browser will open — log in / authorize with your Cloudflare account.\x1b[0m');
+      await ask('   Ready? Press Enter');
       run('cloudflared', ['tunnel', 'login']);
       // create (ignore error if it already exists)
       run('cloudflared', ['tunnel', 'create', 'spel-safety'], { optional: true });
@@ -201,9 +201,9 @@ async function main() {
       const cfg = `tunnel: ${uuid}\ncredentials-file: ${path.join(cfgDir, uuid + '.json')}\ningress:\n  - hostname: ${tunnelHost}\n    service: http://localhost:3000\n  - service: http_status:404\n`;
       if (DRY) { line(`   (dry) would write ${path.join(cfgDir, 'config.yml')}`); }
       else { fs.mkdirSync(cfgDir, { recursive: true }); fs.writeFileSync(path.join(cfgDir, 'config.yml'), cfg); line(`   ✓ config.yml written (UUID ${uuid})`); }
-      line('   Installing cloudflared as a service (boot par auto-start)…');
+      line('   Installing cloudflared as a service (auto-start on boot)…');
       run('cloudflared', ['service', 'install'], { optional: true });
-      line('   \x1b[33m! Agar service install permission maange to Administrator terminal se: cloudflared service install\x1b[0m');
+      line('   \x1b[33m! If the service install asks for permission, run it from an Administrator terminal: cloudflared service install\x1b[0m');
     }
   }
 
@@ -212,8 +212,8 @@ async function main() {
   if (!has('pm2')) { line('   Installing pm2 globally…'); run('npm', ['install', '-g', 'pm2'], { optional: true }); }
   run('pm2', ['start', 'server.js', '--name', 'spel-safety', '--node-args=--disable-warning=ExperimentalWarning'], { optional: true });
   run('pm2', ['save'], { optional: true });
-  line('   Boot par auto-start ke liye:');
-  line(isWin ? '     npm i -g pm2-windows-startup && pm2-startup install' : '     pm2 startup   (jo command bataye woh chalayein)');
+  line('   To auto-start on boot:');
+  line(isWin ? '     npm i -g pm2-windows-startup && pm2-startup install' : '     pm2 startup   (run the command it prints)');
 
   // ---- QR posters ----
   step(9, 'Generating QR posters');
@@ -230,9 +230,9 @@ async function main() {
   line('==================================================');
   line(`  App URL:   ${baseUrl}`);
   line(`  Login:     ${baseUrl}/login.html   (user: ${adminUser})`);
-  line('\n  \x1b[1mAkhri 1 kaam — sirf ye insaani step baaki hai:\x1b[0m');
-  line(`   • WhatsApp link karo: ${mode === 'internet' ? baseUrl : 'http://localhost:3000'}/admin.html kholo (admin login) → QR scan karo.`);
-  if (!emailOn) line('   • (Recommended) baad mein email backup ON kar lena — WhatsApp down ho to alert phir bhi pohanche.');
+  line('\n  \x1b[1mLast step — only this manual step remains:\x1b[0m');
+  line(`   • Link WhatsApp: open ${mode === 'internet' ? baseUrl : 'http://localhost:3000'}/admin.html (admin login) → scan the QR.`);
+  if (!emailOn) line('   • (Recommended) turn on email backup later — so alerts still arrive if WhatsApp goes down.');
   line('\n  Manage: pm2 logs spel-safety | pm2 restart spel-safety | npm run backup');
   rl.close();
 }

@@ -19,22 +19,38 @@
       <form id="form" class="card" novalidate>
         <label class="field">
           <span>Unit <span class="req">*</span></span>
-          <select name="unit" id="unit" required></select>
+          <select name="unit" id="unit" required>
+            <option value="">Select unit…</option>
+            <option>UNIT1</option><option>UNIT2</option><option>UNIT3</option>
+            <option>UNIT4</option><option>UNIT5RYK</option><option>UNIT6</option>
+            <option>UNIT7</option><option>UNIT8</option><option>UNIT9</option>
+          </select>
         </label>
 
         <label class="field">
           <span>What happened? <span class="req">*</span></span>
-          <textarea name="description" required maxlength="5000" placeholder="Describe briefly what happened…"></textarea>
+          <textarea name="description" required maxlength="5000" placeholder="Write a brief description — what happened, where, and who was involved."></textarea>
+          <div class="hint">Keep it short. Full details can be added later during the investigation.</div>
         </label>
 
         <label class="field">
           <span>Type of incident <span class="req">*</span></span>
-          <select name="type" id="type" required></select>
+          <select name="type" id="type" required>
+            <option value="">Select type…</option>
+            <option>Injury</option><option>Near-miss</option><option>Fire</option>
+            <option>Chemical spill</option><option>Equipment damage</option><option>Electrical</option>
+            <option>Environmental</option><option>Property damage</option><option>Other</option>
+          </select>
         </label>
 
         <div class="field">
           <span style="display:block;font-weight:600;font-size:14px;margin-bottom:6px">Severity <span class="req">*</span></span>
-          <div class="sev-select" id="sev"></div>
+          <div class="sev-select" id="sev">
+            <button type="button" class="Minor" data-sev="Minor" aria-pressed="false">Minor</button>
+            <button type="button" class="Serious" data-sev="Serious" aria-pressed="false">Serious</button>
+            <button type="button" class="Major" data-sev="Major" aria-pressed="false">Major</button>
+            <button type="button" class="Fatal" data-sev="Fatal" aria-pressed="false">Fatal</button>
+          </div>
           <input type="hidden" name="severity" id="severity" required />
         </div>
 
@@ -43,15 +59,19 @@
           <input name="location" maxlength="200" placeholder="e.g. Molding hall, Machine M-12" />
         </label>
 
-        <label class="field">
-          <span>When did it happen?</span>
-          <input type="datetime-local" name="occurred_at" id="occurred_at" />
-        </label>
+        <div class="field">
+          <span style="display:block;font-weight:600;font-size:14px;margin-bottom:6px">When did it happen?</span>
+          <div class="grid cols-2" style="gap:10px">
+            <input type="date" id="occurred_date" aria-label="Date" />
+            <input type="time" id="occurred_time" aria-label="Time" />
+          </div>
+          <input type="hidden" name="occurred_at" id="occurred_at" />
+        </div>
 
         <label class="field">
           <span>Injured person (if any)</span>
           <input name="injured_person" maxlength="200" placeholder="Name / employee no. — leave blank if none" />
-          <div class="hint">Sirf tab likhein jab zaroori ho. Ye naam safety record ka hissa banta hai.</div>
+          <div class="hint">Only enter this when necessary. This name becomes part of the safety record.</div>
         </label>
 
         <div class="grid cols-2">
@@ -60,10 +80,14 @@
             <input name="reporter_name" maxlength="200" placeholder="Reporter name" />
           </label>
           <label class="field">
-            <span>Your contact</span>
-            <input name="reporter_contact" maxlength="200" placeholder="Phone / extension" />
+            <span>Employee code</span>
+            <input name="reporter_code" maxlength="200" placeholder="e.g. EMP-1234" />
           </label>
         </div>
+        <label class="field">
+          <span>Your contact</span>
+          <input name="reporter_contact" maxlength="200" placeholder="Phone / extension" />
+        </label>
 
         <label class="field">
           <span>Photo (optional)</span>
@@ -74,10 +98,10 @@
         <button type="submit" class="btn big" id="submit">🚨 Submit &amp; Alert Management</button>
 
         <p class="hint" style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px">
-          <b>Privacy notice:</b> Ye report SPEL ke safety record mein save hoti hai aur management ko
-          email/WhatsApp par foran bheji jati hai (photo aur naam samet). Ye sirf workplace safety,
-          investigation aur legal/compliance requirements ke liye use hoti hai. Kisi doosre shakhs ka
-          naam ya photo sirf zaroorat ke mutabiq likhein.
+          <b>Privacy notice:</b> This report is saved in SPEL's safety record and sent to management
+          instantly by email/WhatsApp (including the photo and name). It is used only for workplace safety,
+          investigation, and legal/compliance requirements. Enter another person's name or photo
+          only when necessary.
         </p>
       </form>
     </div>

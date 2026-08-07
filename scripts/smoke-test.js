@@ -157,9 +157,11 @@ if (!ADMIN_PASS) {
     check('csrf token issued', Boolean(admin.csrf));
     {
       const { res, body } = await admin.json('/api/dashboard/stats');
-      check('dashboard stats load', res.status === 200 && typeof body?.total === 'number');
+      check('dashboard stats load', res.status === 200 && typeof body?.period?.total === 'number');
       check('monthly trend has 12 buckets', body?.monthly?.length === 12, String(body?.monthly?.length));
       check('todayPkt present', Boolean(body?.todayPkt));
+      check('follow-through present', body?.followup && typeof body.followup.investigated === 'number');
+      check('needs-attention + overdue lists present', Array.isArray(body?.needsAttention) && Array.isArray(body?.overdueCapa));
     }
     {
       const { res, body } = await admin.json('/api/incidents?page=1');
