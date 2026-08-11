@@ -99,18 +99,34 @@ async function main() {
   step(2, 'Deployment mode');
   line('   1) LAN-only  — access from the factory network only');
   line('   2) Internet  — from anywhere via Cloudflare Tunnel (HTTPS)');
-  const mode = (await ask('   Choose 1 or 2', '1')) === '2' ? 'internet' : 'lan';
+  line('   3) Both       — factory Wi-Fi AND mobile-data/outside (recommended)');
+  const choice = await ask('   Choose 1, 2 or 3', '3');
+  const mode = choice === '1' ? 'lan' : choice === '2' ? 'internet' : 'both';
 
-  let baseUrl, cookieSecure, trustProxy, tunnelHost = '';
+  let baseUrl, cookieSecure, trustProxy, tunnelHost = '', lanBase = '';
   if (mode === 'lan') {
-    const ip = await ask('   Server LAN IP (e.g. 192.168.1.50)', 'localhost');
+    const ip = await ask('   Server LAN IP (e.g. 192.168.11.6)', 'localhost');
     baseUrl = `http://${ip}:3000`; cookieSecure = 'false'; trustProxy = '0';
-  } else {
+  } else if (mode === 'internet') {
     tunnelHost = await ask('   Public hostname (e.g. safety.spelgroup.com)');
     while (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(tunnelHost)) {
       tunnelHost = await ask('   Enter a valid hostname (e.g. safety.spelgroup.com)');
     }
     baseUrl = `https://${tunnelHost}`; cookieSecure = 'true'; trustProxy = '1';
+  } else {
+    // Both: public HTTPS URL for alert links + remote/4G access, AND a LAN URL
+    // for on-site QR that keeps working even if the internet line is down.
+    const ip = await ask('   Server LAN IP (e.g. 192.168.11.6)', 'localhost');
+    tunnelHost = await ask('   Public hostname (e.g. safety.spelgroup.com)');
+    while (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(tunnelHost)) {
+      tunnelHost = await ask('   Enter a valid hostname (e.g. safety.spelgroup.com)');
+    }
+    baseUrl = `https://${tunnelHost}`;
+    lanBase = `http://${ip}:3000`;
+    // cookieSecure=false so an on-site admin can still log in over the LAN (http)
+    // during an internet outage; the login cookie is httpOnly + sameSite=lax and
+    // the network is internal. trust 1 hop for the Cloudflare tunnel.
+    cookieSecure = 'false'; trustProxy = '1';
   }
 
   // ---- Credentials / recipients ----
@@ -144,6 +160,7 @@ async function main() {
     const env = [
       `PORT=3000`,
       `BASE_URL=${baseUrl}`,
+      `LAN_BASE_URL=${lanBase}`,
       `SESSION_SECRET=${gen(32)}`,
       `ADMIN_USERNAME=${adminUser}`,
       `ADMIN_PASSWORD=${adminPass}`,
@@ -179,7 +196,7 @@ async function main() {
   } else { line('   → skip (empty start)'); }
 
   // ---- Cloudflare Tunnel ----
-  if (mode === 'internet') {
+  if (mode === 'internet' || mode === 'both') {
     step(7, 'Cloudflare Tunnel');
     if (!haveCloudflared) {
       line('   \x1b[33m! cloudflared is not installed. Install it and run setup again:\x1b[0m');
@@ -228,10 +245,12 @@ async function main() {
   line('\n==================================================');
   line('  ✓ Setup complete');
   line('==================================================');
-  line(`  App URL:   ${baseUrl}`);
-  line(`  Login:     ${baseUrl}/login.html   (user: ${adminUser})`);
+  line(`  Public URL: ${baseUrl}`);
+  if (lanBase) line(`  LAN URL:    ${lanBase}   (works even if the internet is down)`);
+  line(`  Login:      ${baseUrl}/login.html   (user: ${adminUser})`);
+  if (lanBase) line(`  QR posters: ${lanBase}/qr/index.html   (two codes per unit: Wi-Fi + mobile-data)`);
   line('\n  \x1b[1mLast step — only this manual step remains:\x1b[0m');
-  line(`   • Link WhatsApp: open ${mode === 'internet' ? baseUrl : 'http://localhost:3000'}/admin.html (admin login) → scan the QR.`);
+  line(`   • Link WhatsApp: open http://localhost:3000/admin.html on the server (admin login) → scan the QR.`);
   if (!emailOn) line('   • (Recommended) turn on email backup later — so alerts still arrive if WhatsApp goes down.');
   line('\n  Manage: pm2 logs spel-safety | pm2 restart spel-safety | npm run backup');
   rl.close();

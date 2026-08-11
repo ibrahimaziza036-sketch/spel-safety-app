@@ -43,6 +43,10 @@ export const ROLES = ['viewer', 'safety_officer', 'admin'];
 export const config = {
   port: Number(process.env.PORT || 3000),
   baseUrl: (process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, ''),
+  // Optional on-site LAN URL (e.g. http://192.168.11.6:3000). When set, QR
+  // posters carry TWO codes per unit — a LAN one that works even if the
+  // internet line is down, and the public (BASE_URL) one for mobile data.
+  lanBaseUrl: (process.env.LAN_BASE_URL || '').replace(/\/$/, ''),
 
   managementEmails: list(process.env.MANAGEMENT_EMAILS),
   managementWhatsApp: list(process.env.MANAGEMENT_WHATSAPP),
