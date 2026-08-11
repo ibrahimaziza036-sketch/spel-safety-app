@@ -153,6 +153,12 @@ addColumn('capa', 'verified_by', 'TEXT');
 addColumn('capa', 'effectiveness', 'TEXT'); // Effective | Not Effective | Recurred
 addColumn('capa', 'verify_note', 'TEXT');
 
+// Idempotency key from the report form. An offline/retried submission carries the
+// same token, so the server creates the incident at most once (no duplicates
+// from a flaky network or a queue-flush race).
+addColumn('incidents', 'client_token', 'TEXT');
+
 db.exec('CREATE INDEX IF NOT EXISTS idx_incidents_voided ON incidents(voided_at);');
+db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_incidents_client_token ON incidents(client_token) WHERE client_token IS NOT NULL;');
 
 export default db;

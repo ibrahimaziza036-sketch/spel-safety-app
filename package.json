@@ -10,6 +10,7 @@
     "setup": "node scripts/setup.js",
     "qr": "node --disable-warning=ExperimentalWarning scripts/generate-qr.js",
     "backup": "node --disable-warning=ExperimentalWarning scripts/backup.js",
+    "mssql-sync": "node --disable-warning=ExperimentalWarning scripts/mssql-sync.js",
     "seed": "node --disable-warning=ExperimentalWarning scripts/seed.js",
     "smoke": "node --disable-warning=ExperimentalWarning scripts/smoke-test.js"
   },
@@ -22,6 +23,7 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-session": "^1.19.0",
+    "mssql": "^11.0.1",
     "multer": "^2.0.1",
     "nodemailer": "^6.9.16",
     "qrcode": "^1.5.4",

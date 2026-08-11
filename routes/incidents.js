@@ -179,6 +179,8 @@ router.post('/', intakeLimit,
   const type = scalar(b.type);
   const severity = scalar(b.severity);
   const description = text(b.description, config.intake.maxDescription);
+  // Idempotency key from the form (offline queue / retry). Same token = same report.
+  const clientToken = text(b.client_token, 100) || null;
 
   if (!UNITS.includes(unit)) errors.push('Invalid or missing unit.');
   if (!INCIDENT_TYPES.includes(type)) errors.push('Invalid or missing incident type.');
@@ -188,6 +190,16 @@ router.post('/', intakeLimit,
     // Clean up an orphaned upload if validation failed.
     if (req.file) fs.unlink(req.file.path, () => {});
     return res.status(400).json({ ok: false, errors });
+  }
+
+  // Idempotency: a retried/queued submission with the same token must NOT create
+  // a second incident (or fire a second alert). Return the original instead.
+  if (clientToken) {
+    const existing = db.prepare('SELECT id, ref_no FROM incidents WHERE client_token = ?').get(clientToken);
+    if (existing) {
+      if (req.file) fs.unlink(req.file.path, () => {});
+      return res.status(200).json({ ok: true, id: existing.id, ref_no: existing.ref_no, duplicate: true });
+    }
   }
   // Storage full is NOT a validation failure — the report must still go through
   // (safety first); the photo is simply dropped and the reporter is told.
@@ -223,8 +235,8 @@ router.post('/', intakeLimit,
   const insertIncident = db.prepare(`
     INSERT INTO incidents
       (ref_no, unit, location, occurred_at, type, severity, description,
-       injured_person, reporter_name, reporter_code, reporter_contact, photo_path, status, created_at, updated_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Open', ?, ?)
+       injured_person, reporter_name, reporter_code, reporter_contact, photo_path, client_token, status, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Open', ?, ?)
   `);
   const nextSeq = db.prepare(
     `SELECT MAX(CAST(substr(ref_no, 10) AS INTEGER)) AS n FROM incidents WHERE ref_no LIKE ?`
@@ -250,6 +262,7 @@ router.post('/', intakeLimit,
         text(b.reporter_code, config.intake.maxShortField) || null,
         text(b.reporter_contact, config.intake.maxShortField) || null,
         photoPath,
+        clientToken,
         created,
         created,
       );
@@ -265,6 +278,12 @@ router.post('/', intakeLimit,
   } catch (err) {
     // Never leave an orphaned photo behind if the record could not be written.
     if (req.file) fs.unlink(req.file.path, () => { invalidateStorageCache(); });
+    // Lost a race to another submission with the SAME token — return the winner
+    // instead of a 500, so a retry is still idempotent.
+    if (clientToken && /client_token|UNIQUE/i.test(err.message)) {
+      const existing = db.prepare('SELECT id, ref_no FROM incidents WHERE client_token = ?').get(clientToken);
+      if (existing) return res.status(200).json({ ok: true, id: existing.id, ref_no: existing.ref_no, duplicate: true });
+    }
     console.error('[incidents] create failed:', err.message);
     return res.status(500).json({ ok: false, error: 'Could not save the report. Please try again or call the safety officer.' });
   }

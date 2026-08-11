@@ -148,6 +148,19 @@ async function main() {
     smtp.mgmt = await ask('     Management emails (comma-separated)');
   }
 
+  // ---- Optional MS SQL backup mirror ----
+  const mssqlOn = await askYN('   Also push a daily backup copy into MS SQL Server?', false);
+  let mssql = { enabled: 'false', server: 'localhost', port: '1433', database: '', user: '', pass: '', hour: '2' };
+  if (mssqlOn) {
+    mssql.enabled = 'true';
+    mssql.server = await ask('     MS SQL server (host or host\\instance)', 'localhost');
+    mssql.port = await ask('     MS SQL port', '1433');
+    mssql.database = await ask('     MS SQL database name');
+    mssql.user = await ask('     MS SQL username');
+    mssql.pass = await ask('     MS SQL password');
+    mssql.hour = await ask('     Daily push hour (0-23, PKT)', '2');
+  }
+
   // ---- Write .env ----
   step(4, 'Writing .env (secrets auto-generated)');
   const envPath = path.join(ROOT, '.env');
@@ -175,6 +188,14 @@ async function main() {
       `SMTP_USER=${smtp.user}`,
       `SMTP_PASS=${smtp.pass}`,
       `EMAIL_FROM=${smtp.from}`,
+      `MSSQL_ENABLED=${mssql.enabled}`,
+      `MSSQL_SERVER=${mssql.server}`,
+      `MSSQL_PORT=${mssql.port}`,
+      `MSSQL_DATABASE=${mssql.database}`,
+      `MSSQL_USER=${mssql.user}`,
+      `MSSQL_PASSWORD=${mssql.pass}`,
+      `MSSQL_ENCRYPT=true`,
+      `MSSQL_BACKUP_HOUR=${mssql.hour}`,
       `WHATSAPP_ENABLED=true`,
       `WHATSAPP_HEADLESS=true`,
       `WHATSAPP_MIN_SEVERITY=Minor`,

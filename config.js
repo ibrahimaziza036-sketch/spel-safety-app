@@ -94,6 +94,21 @@ export const config = {
     retrySweepMs: Number(process.env.NOTIFY_RETRY_SWEEP_MS || 60 * 1000),
   },
 
+  // Optional mirror of the SQLite data into MS SQL Server (backup + reporting).
+  // The app's live database stays SQLite; this only PUSHES a copy on a schedule.
+  mssql: {
+    enabled: bool(process.env.MSSQL_ENABLED, false),
+    server: process.env.MSSQL_SERVER || 'localhost',
+    port: Number(process.env.MSSQL_PORT || 1433),
+    database: process.env.MSSQL_DATABASE || '',
+    user: process.env.MSSQL_USER || '',
+    password: process.env.MSSQL_PASSWORD || '',
+    encrypt: bool(process.env.MSSQL_ENCRYPT, true),
+    tablePrefix: process.env.MSSQL_TABLE_PREFIX || 'spel_',
+    // Hour of day (PKT, 0-23) to run the daily push.
+    hour: Number.isFinite(Number(process.env.MSSQL_BACKUP_HOUR)) ? Number(process.env.MSSQL_BACKUP_HOUR) : 2,
+  },
+
   // Data retention (0 = keep forever).
   retention: {
     notificationLogDays: Number(process.env.RETENTION_NOTIFICATION_LOG_DAYS || 180),

@@ -1,0 +1,13 @@
+{
+  "name": "SPEL Safety — Incident Report",
+  "short_name": "SPEL Safety",
+  "description": "Report a workplace safety incident. Works offline — reports are saved on your phone and sent automatically when the internet is back.",
+  "start_url": "/report.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any maskable" }
+  ]
+}
