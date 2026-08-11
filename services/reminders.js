@@ -26,7 +26,9 @@ const NOT_VOID = 'voided_at IS NULL';
 const EVENT_TIME = 'COALESCE(occurred_at, created_at)';
 
 const DEFAULTS = {
-  enabled: true,
+  // OFF by default — automated digests only go out if an admin explicitly turns
+  // them on. The instant per-incident alert is separate and always on.
+  enabled: false,
   hour: 8, // 08:00 PKT
   // Days an incident may stay un-investigated before it counts as past SLA.
   slaDays: { Fatal: 1, Major: 1, Serious: 3, Minor: 7 },
