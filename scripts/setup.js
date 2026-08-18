@@ -100,13 +100,22 @@ async function main() {
   line('   1) LAN-only  — access from the factory network only');
   line('   2) Internet  — from anywhere via Cloudflare Tunnel (HTTPS)');
   line('   3) Both       — factory Wi-Fi AND mobile-data/outside (recommended)');
-  const choice = await ask('   Choose 1, 2 or 3', '3');
-  const mode = choice === '1' ? 'lan' : choice === '2' ? 'internet' : 'both';
+  line('   4) Reverse proxy — you provide HTTPS (Caddy/Nginx, incl. free DuckDNS+Caddy, no domain to buy)');
+  const choice = await ask('   Choose 1, 2, 3 or 4', '3');
+  const mode = choice === '1' ? 'lan' : choice === '2' ? 'internet' : choice === '4' ? 'proxy' : 'both';
 
   let baseUrl, cookieSecure, trustProxy, tunnelHost = '', lanBase = '';
   if (mode === 'lan') {
     const ip = await ask('   Server LAN IP (e.g. 192.168.11.6)', 'localhost');
     baseUrl = `http://${ip}:3000`; cookieSecure = 'false'; trustProxy = '0';
+  } else if (mode === 'proxy') {
+    // A reverse proxy (Caddy/Nginx) terminates HTTPS and forwards to the app on
+    // localhost:3000. Works with a free DuckDNS hostname — no domain purchase.
+    let host = await ask('   Public hostname your HTTPS proxy serves (e.g. spelsafety.duckdns.org)');
+    while (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(host)) {
+      host = await ask('   Enter a valid hostname (e.g. spelsafety.duckdns.org)');
+    }
+    baseUrl = `https://${host}`; cookieSecure = 'true'; trustProxy = '1';
   } else if (mode === 'internet') {
     tunnelHost = await ask('   Public hostname (e.g. safety.spelgroup.com)');
     while (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(tunnelHost)) {

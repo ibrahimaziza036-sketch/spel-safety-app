@@ -11,16 +11,69 @@ and safer.
 
 ---
 
-## 0. One prerequisite — a domain on Cloudflare (for a stable QR URL)
+## Pick your public URL method
 
-- Best: use a company domain (e.g. **spelgroup.com**) — add it to a **free**
-  Cloudflare account (change its nameservers to Cloudflare). Then you'll use
-  `safety.spelgroup.com`.
-- No domain? A cheap one (~$1–10/year, e.g. a `.xyz`) added to Cloudflare works.
-- Just want to test **right now for free** without a domain? You can use a
-  temporary `https://<random>.trycloudflare.com` URL (Step 7 note) — but it
-  **changes on every restart**, so it's fine for testing, **not** for printed QR
-  posters.
+You need a **stable HTTPS URL** for the QR posters. Two ways:
+
+- **A — Free, NO domain to buy (recommended for now): DuckDNS + Caddy.** A free
+  `something.duckdns.org` hostname + Caddy for automatic HTTPS. See **Section 0b**.
+- **B — Cloudflare Tunnel (needs a domain on Cloudflare).** Nicer (no inbound
+  ports) but requires a domain like `safety.spelgroup.com`. See **Section 0**.
+
+Both give offline-capable HTTPS. You can start on DuckDNS today and switch to a
+company domain later by editing two lines.
+
+## 0. (Path B) Domain on Cloudflare
+
+- Use a company domain (e.g. **spelgroup.com**) added to a **free** Cloudflare
+  account (nameservers → Cloudflare). Then you'll use `safety.spelgroup.com`.
+- No domain? A cheap one (~$1–10/year) added to Cloudflare — or just use Path A.
+
+## 0b. (Path A) FREE, no domain — DuckDNS + Caddy  ⭐ recommended for now
+
+Do **Steps 1–4** below first (create VM, install Node/Chromium, clone,
+npm install). Then, instead of the Cloudflare tunnel:
+
+1. **DuckDNS:** sign in at **duckdns.org** (Google/GitHub), create a subdomain
+   e.g. `spelsafety`, and set its IP to your Oracle VM's **public IP**. Your URL
+   becomes `https://spelsafety.duckdns.org`.
+2. **Open inbound 80 + 443 on Oracle:**
+   - Oracle console → your VM's subnet → **Security List → Ingress rules** → add
+     TCP **80** and TCP **443** from `0.0.0.0/0`.
+   - On the VM, open them in the OS firewall too:
+     ```bash
+     sudo iptables -I INPUT 6 -p tcp --dport 80 -j ACCEPT
+     sudo iptables -I INPUT 6 -p tcp --dport 443 -j ACCEPT
+     sudo netfilter-persistent save
+     ```
+3. **Install Caddy** (auto-HTTPS reverse proxy):
+   ```bash
+   sudo apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | sudo gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+   curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | sudo tee /etc/apt/sources.list.d/caddy-stable.list
+   sudo apt update && sudo apt install -y caddy
+   ```
+4. **Configure Caddy** — put this in `/etc/caddy/Caddyfile` (see `Caddyfile.example`):
+   ```
+   spelsafety.duckdns.org {
+       encode zstd gzip
+       reverse_proxy 127.0.0.1:3000
+   }
+   ```
+   ```bash
+   sudo systemctl restart caddy
+   ```
+   Caddy gets a free HTTPS certificate automatically.
+5. **Configure the app:** run `npm run setup`, choose **mode 4 (Reverse proxy)**,
+   hostname `spelsafety.duckdns.org`. (Admin / WhatsApp / email / MS SQL=No —
+   same as Step 5 below.) This skips the Cloudflare tunnel.
+6. Continue with **Step 6** (Chromium path) and **Step 7** (start on boot). Your
+   public URL is `https://spelsafety.duckdns.org`.
+
+> Switch to a real domain later: change the Caddyfile hostname, set `BASE_URL` in
+> `.env`, run `npm run qr`, restart. Two edits.
+
+---
 
 ## 1. Create the free server
 

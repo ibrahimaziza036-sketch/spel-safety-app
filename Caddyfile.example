@@ -1,0 +1,13 @@
+# SPEL Safety — Caddy reverse proxy with automatic free HTTPS (Let's Encrypt).
+#
+# Use this when you host behind Caddy (e.g. a free DuckDNS hostname on an Oracle
+# Cloud VM) instead of a Cloudflare Tunnel. Copy to /etc/caddy/Caddyfile,
+# replace the hostname with yours, then: sudo systemctl restart caddy
+#
+# Requires: the hostname points to this server's public IP, and inbound TCP 80
+# + 443 are open. Caddy obtains and renews the TLS certificate automatically.
+
+spelsafety.duckdns.org {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:3000
+}
