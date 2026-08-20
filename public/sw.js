@@ -10,7 +10,7 @@
 // admin, /api/*) falls through to the normal network — the SW never caches or
 // interferes with the authenticated app.
 
-const CACHE = 'spel-report-v2';
+const CACHE = 'spel-report-v3';
 const SHELL = [
   '/report.html',
   '/js/report.js',

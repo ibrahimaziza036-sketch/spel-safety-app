@@ -176,7 +176,7 @@ async function updatePendingNote() {
   const el = document.getElementById('pending-note');
   if (!el) return;
   el.innerHTML = n > 0
-    ? `<div class="banner warn">📥 ${n} report(s) saved on this phone, waiting for internet. They will send automatically.</div>`
+    ? `<div class="banner warn">📥 ${n} report(s) saved on this phone, waiting for internet — will send automatically. <span class="ur" style="display:block;margin-top:3px">${n} رپورٹ فون پر محفوظ، انٹرنیٹ کا انتظار — خود بھیج دی جائیں گی۔</span></div>`
     : '';
 }
 
@@ -185,13 +185,15 @@ function showSuccess({ queued, ref } = {}) {
   const view = document.getElementById('success-view');
   view.style.display = 'block';
   const refBox = document.getElementById('ref-no');
+  const title = document.getElementById('succ-title');
+  const msg = document.getElementById('succ-msg');
   if (queued) {
-    view.querySelector('h2').textContent = 'Report saved on your phone';
-    view.querySelector('.muted').textContent = 'No internet right now — it will be sent automatically the moment you are back online. You can close this page.';
-    refBox.textContent = '⏳ Queued';
+    title.innerHTML = 'Report saved on your phone <span class="ur">رپورٹ فون پر محفوظ ہو گئی</span>';
+    msg.innerHTML = 'No internet right now — it will send automatically once you are back online. You can close this page. <span class="ur" style="display:block;margin-top:4px">ابھی انٹرنیٹ نہیں — انٹرنیٹ آتے ہی خود بھیج دی جائے گی۔ آپ صفحہ بند کر سکتے ہیں۔</span>';
+    refBox.textContent = '⏳ Queued · قطار میں';
   } else {
-    view.querySelector('h2').textContent = 'Report submitted';
-    view.querySelector('.muted').textContent = 'Management has been alerted. Thank you for keeping SPEL safe.';
+    title.innerHTML = 'Report submitted <span class="ur">رپورٹ جمع ہو گئی</span>';
+    msg.innerHTML = 'Management has been alerted. Thank you for keeping SPEL safe. <span class="ur" style="display:block;margin-top:4px">مینجمنٹ کو اطلاع مل گئی۔ SPEL کو محفوظ رکھنے کا شکریہ۔</span>';
     refBox.textContent = ref || '';
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -201,13 +203,13 @@ form.addEventListener('submit', async (e) => {
   e.preventDefault();
   banner.innerHTML = '';
   combineWhen();
-  if (!form.unit.value) return showBanner('err', 'Please select a unit.');
-  if (!form.description.value.trim()) return showBanner('err', 'Please describe what happened.');
-  if (!form.type.value) return showBanner('err', 'Please select the incident type.');
-  if (!sevInput.value) return showBanner('err', 'Please select a severity.');
+  if (!form.unit.value) return showBanner('err', 'Please select a unit. <span class="ur">یونٹ منتخب کریں</span>');
+  if (!form.description.value.trim()) return showBanner('err', 'Please describe what happened. <span class="ur">بتائیں کیا ہوا</span>');
+  if (!form.type.value) return showBanner('err', 'Please select the incident type. <span class="ur">حادثے کی قسم منتخب کریں</span>');
+  if (!sevInput.value) return showBanner('err', 'Please select a severity. <span class="ur">شدت منتخب کریں</span>');
 
   submitBtn.disabled = true;
-  submitBtn.textContent = 'Submitting…';
+  submitBtn.textContent = 'Submitting… · بھیجا جا رہا ہے';
   const snapshot = snapshotForm();
   try {
     const data = await postIncident(recordToFormData(snapshot));
@@ -223,16 +225,16 @@ form.addEventListener('submit', async (e) => {
     if (err.network) {
       // Offline / server unreachable → save on the phone and confirm.
       try { await idbAdd(snapshot); showSuccess({ queued: true }); }
-      catch { showBanner('err', 'Could not save the report on this device. Please note the details and tell the safety officer.'); resetBtn(); }
+      catch { showBanner('err', 'Could not save the report on this device. Please note the details and tell the safety officer. <span class="ur">اس فون پر محفوظ نہ ہو سکی — تفصیل نوٹ کر کے سیفٹی افسر کو بتائیں۔</span>'); resetBtn(); }
     } else {
-      showBanner('err', 'Could not submit: ' + err.message);
+      showBanner('err', 'Could not submit: ' + err.message + ' <span class="ur">جمع نہ ہو سکی، دوبارہ کوشش کریں۔</span>');
       resetBtn();
     }
   }
 });
 function resetBtn() {
   submitBtn.disabled = false;
-  submitBtn.innerHTML = '🚨 Submit &amp; Alert Management';
+  submitBtn.innerHTML = '🚨 Submit &amp; Alert Management · جمع کرائیں';
 }
 
 document.getElementById('another').addEventListener('click', () => location.reload());
