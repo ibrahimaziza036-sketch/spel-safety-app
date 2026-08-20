@@ -10,7 +10,6 @@ import { audit, recentAudit } from '../services/audit.js';
 import { alertQueueStatus, retryAlert } from '../services/notify.js';
 import { storageStatus } from '../services/storage.js';
 import { runRetention } from '../services/retention.js';
-import { getReminderConfig, setReminderConfig, sendReminderDigest, buildReminderData } from '../services/reminders.js';
 import { intakeStatus } from './incidents.js';
 import { dbPath } from '../db.js';
 import fs from 'node:fs';
@@ -91,25 +90,6 @@ router.post('/email/test', async (req, res) => {
   });
   audit(req, { entity: 'system', action: 'email_test', detail: r.ok ? 'sent' : ('failed: ' + r.reason) });
   res.json({ ok: r.ok, error: r.ok ? undefined : r.reason });
-});
-
-// ---- daily follow-up reminders ----
-router.get('/reminders', (req, res) => {
-  const data = buildReminderData();
-  res.json({ ok: true, config: getReminderConfig(), due: { overdue: data.overdue.length, overdueSla: data.overdueSla.length } });
-});
-
-router.post('/reminders', express.json({ limit: '8kb' }), (req, res) => {
-  const next = setReminderConfig(req.body || {});
-  audit(req, { entity: 'system', action: 'reminders_config', detail: `enabled=${next.enabled} hour=${next.hour}` });
-  res.json({ ok: true, config: next });
-});
-
-// Send the digest right now (test / on-demand).
-router.post('/reminders/test', async (req, res) => {
-  const r = await sendReminderDigest();
-  audit(req, { entity: 'system', action: 'reminders_test', detail: r.attempted ? `wa=${r.waDelivered} email=${r.emailDelivered}` : (r.reason || 'nothing due') });
-  res.json({ ok: true, ...r });
 });
 
 // Recent notification attempts, for troubleshooting delivery.

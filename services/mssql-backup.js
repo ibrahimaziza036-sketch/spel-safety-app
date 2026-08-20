@@ -126,7 +126,7 @@ export async function runMssqlBackup({ verbose = false } = {}) {
   return result;
 }
 
-// ---- daily scheduled worker (same pattern as retention/reminders) ----
+// ---- daily scheduled worker (same pattern as retention) ----
 const LAST_RUN_KEY = 'mssql_last_run';
 
 async function tick() {
