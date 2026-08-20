@@ -43,17 +43,6 @@ sevBox.querySelectorAll('button').forEach((b) => {
   });
 });
 
-// Type tiles (pictorial picker) → hidden #type input (same value the server reads).
-const typeGrid = document.getElementById('typeGrid');
-const typeInput = document.getElementById('type');
-typeGrid.querySelectorAll('button').forEach((b) => {
-  b.addEventListener('click', () => {
-    typeGrid.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', 'false'));
-    b.setAttribute('aria-pressed', 'true');
-    typeInput.value = b.dataset.type;
-  });
-});
-
 // Separate date + time inputs → combined into the hidden occurred_at the server
 // reads (as "YYYY-MM-DDTHH:MM", interpreted as PKT wall-clock).
 const dateEl = document.getElementById('occurred_date');
